@@ -49,11 +49,18 @@ export default function OrderForm() {
     setItems(newItems);
   };
 
+  const updateQuantityInput = (index, value) => {
+    const parsedValue = parseFloat(value);
+    const newItems = [...items];
+    newItems[index].quantity = Number.isNaN(parsedValue) ? '' : Math.max(0.5, parsedValue);
+    setItems(newItems);
+  };
+
   const removeItem = (type) => {
     setItems((current) => current.filter((item) => item.type !== type));
   };
 
-  const totalAmount = items.reduce((acc, curr) => acc + curr.quantity * curr.pricePerKg, 0);
+  const totalAmount = items.reduce((acc, curr) => acc + (Number(curr.quantity) || 0) * curr.pricePerKg, 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -132,9 +139,17 @@ export default function OrderForm() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center bg-gray-100 rounded-xl p-1">
-                    <button onClick={() => updateQuantity(index, -0.5)} className="p-1 text-gray-500"><Minus size={16} /></button>
-                    <span className="w-12 text-center font-bold text-sm">{item.quantity}kg</span>
-                    <button onClick={() => updateQuantity(index, 0.5)} className="p-1 text-gray-500"><Plus size={16} /></button>
+                    <button type="button" onClick={() => updateQuantity(index, -0.5)} className="p-1 text-gray-500"><Minus size={16} /></button>
+                    <input
+                      type="number"
+                      min="0.5"
+                      step="0.5"
+                      className="w-14 bg-transparent text-center font-bold text-sm outline-none"
+                      value={item.quantity}
+                      onChange={(e) => updateQuantityInput(index, e.target.value)}
+                    />
+                    <span className="text-xs text-gray-500 pr-1">kg</span>
+                    <button type="button" onClick={() => updateQuantity(index, 0.5)} className="p-1 text-gray-500"><Plus size={16} /></button>
                   </div>
                   <button type="button" onClick={() => removeItem(item.type)} className="text-red-400 p-1"><Trash2 size={18} /></button>
                 </div>

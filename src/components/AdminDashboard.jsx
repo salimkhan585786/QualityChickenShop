@@ -40,6 +40,7 @@ export default function AdminDashboard() {
     outstandingAmount: orders.filter((order) => order.status === 'delivered' && order.paymentStatus !== 'paid').reduce((acc, order) => acc + order.totalAmount, 0),
     activeCustomers: customers.length,
   };
+  const paymentRequests = orders.filter((order) => order.status === 'delivered' && order.paymentStatus === 'payment-submitted');
 
   const updateOrderStatus = async (orderId, status) => {
     try {
@@ -115,6 +116,33 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      <div className="space-y-3">
+        <h3 className="font-bold text-gray-900">Payment Requests</h3>
+        {paymentRequests.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+            No payment confirmations from business yet
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {paymentRequests.map((order) => (
+              <div key={order.id} className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex justify-between items-center">
+                <div>
+                  <p className="font-bold text-gray-900">{order.customerName}</p>
+                  <p className="text-xs text-gray-600">{getProductLabel(order.items?.[0]?.type)}{order.items?.length > 1 ? '...' : ''}</p>
+                  <p className="text-xs text-blue-700 font-medium">Business marked this order as paid</p>
+                </div>
+                <button
+                  onClick={() => updatePaymentStatus(order.id, 'paid')}
+                  className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1"
+                >
+                  <CreditCard size={14} /> Confirm Paid
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-4">
         <h3 className="font-bold text-gray-900">Incoming Orders</h3>
         {loading ? (
@@ -184,7 +212,7 @@ export default function AdminDashboard() {
                         <XCircle size={14} /> Reject
                       </button>
                     )}
-                    {order.paymentStatus !== 'paid' && (
+                    {order.status === 'delivered' && order.paymentStatus !== 'paid' && (
                       <button
                         onClick={() => updatePaymentStatus(order.id, 'paid')}
                         className="flex-shrink-0 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"

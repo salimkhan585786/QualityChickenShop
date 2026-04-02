@@ -1,33 +1,47 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../App';
-import { Package, MapPin, Phone, Truck, CheckCircle, NotebookPen } from 'lucide-react';
-import { formatCurrency, cn } from '../lib/utils';
+import { MapPin, Phone, Truck, CheckCircle, NotebookPen, History } from 'lucide-react';
+import { formatCurrency, getProductLabel } from '../lib/utils';
 
 export default function DeliveryDashboard() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState([]);
+  const [activeOrders, setActiveOrders] = useState([]);
+  const [completedOrders, setCompletedOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
+    const activeQuery = query(
       collection(db, 'orders'),
       where('deliveryBoyId', '==', user.uid),
       where('status', 'in', ['packed', 'out-for-delivery']),
       orderBy('createdAt', 'desc')
     );
-console.log("user.uid:", user.uid);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      console.log("Orders:", ordersData);
-      setOrders(ordersData);
+
+    const completedQuery = query(
+      collection(db, 'orders'),
+      where('deliveryBoyId', '==', user.uid),
+      where('status', '==', 'delivered'),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+
+    const unsubscribeActive = onSnapshot(activeQuery, (snapshot) => {
+      setActiveOrders(snapshot.docs.map((orderDoc) => ({ id: orderDoc.id, ...orderDoc.data() })));
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    const unsubscribeCompleted = onSnapshot(completedQuery, (snapshot) => {
+      setCompletedOrders(snapshot.docs.map((orderDoc) => ({ id: orderDoc.id, ...orderDoc.data() })));
+    });
+
+    return () => {
+      unsubscribeActive();
+      unsubscribeCompleted();
+    };
   }, [user]);
 
   const updateStatus = async (orderId, status) => {
@@ -46,18 +60,19 @@ console.log("user.uid:", user.uid);
         <div className="space-y-3">
           {[1, 2, 3].map(i => <div key={i} className="h-40 bg-gray-200 animate-pulse rounded-2xl"></div>)}
         </div>
-      ) : orders.length === 0 ? (
+      ) : activeOrders.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
           <Truck className="mx-auto text-gray-300 mb-2" size={48} />
           <p className="text-gray-500 font-medium">No active deliveries</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
+          {activeOrders.map((order) => (
             <div key={order.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-bold text-gray-900 text-lg">{order.customerName}</h3>
+                  <p className="text-sm text-gray-500">{getProductLabel(order.items?.[0]?.type)}{order.items?.length > 1 ? '...' : ''}</p>
                   <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{order.timeSlot}</p>
                 </div>
                 <div className="text-right">
@@ -105,6 +120,36 @@ console.log("user.uid:", user.uid);
           ))}
         </div>
       )}
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <History size={18} className="text-gray-500" />
+          <h3 className="font-bold text-gray-900">Previous Deliveries</h3>
+        </div>
+        {completedOrders.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+            No completed deliveries yet
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {completedOrders.map((order) => (
+              <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-start">
+                <div>
+                  <p className="font-bold text-gray-900">{order.customerName}</p>
+                  <p className="text-sm text-gray-500">{getProductLabel(order.items?.[0]?.type)}{order.items?.length > 1 ? '...' : ''}</p>
+                  <p className="text-xs text-gray-500">{order.deliveryDate} • {order.timeSlot}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-green-600">{formatCurrency(order.totalAmount)}</p>
+                  <p className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block bg-green-100 text-green-700">
+                    Delivered
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
