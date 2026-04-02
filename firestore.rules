@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: uid
+    // Fields:
+    //   - uid: string (required)
+    //   - role: string (required, enum: admin, business, delivery)
+    //   - businessName: string
+    //   - address: string
+    //   - contact: string
+    //   - email: string
+    //   - customPrice: number
+    //   - createdAt: timestamp
+    //
+    // Collection: orders
+    // Document ID: orderId
+    // Fields:
+    //   - customerId: string (required)
+    //   - customerName: string
+    //   - items: list (required)
+    //   - totalAmount: number (required)
+    //   - status: string (required, enum: placed, confirmed, packed, out-for-delivery, delivered, rejected)
+    //   - deliveryDate: string (required)
+    //   - timeSlot: string
+    //   - notes: string
+    //   - deliveryBoyId: string
+    //   - paymentStatus: string
+    //   - createdAt: timestamp
+    //
+    // Collection: settings
+    // Document ID: global
+    // Fields:
+    //   - dailyRate: number
+    //   - updatedAt: timestamp
+    //
+    // Collection: subscriptions
+    // Document ID: subId
+    // Fields:
+    //   - customerId: string
+    //   - items: list
+    //   - frequency: string
+    //   - active: bool
+    //   - createdAt: timestamp
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         (request.auth.token.email == "salimkhan585786@gmail.com") ||
+         (request.auth.token.phone_number == "+917021414700"));
+    }
+
+    function isDeliveryBoy() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'delivery';
+    }
+
+    function isBusinessUser() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business';
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'role']) &&
+             data.uid is string &&
+             data.role in ['admin', 'business', 'delivery'] &&
+             (data.role != 'admin' || request.auth.token.phone_number == "+917021414700");
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['customerId', 'items', 'totalAmount', 'status', 'deliveryDate']) &&
+             data.customerId is string &&
+             data.items is list &&
+             data.totalAmount is number &&
+             data.status in ['placed', 'confirmed', 'packed', 'out-for-delivery', 'delivered', 'rejected'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (isOwner(uid) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(uid) && isValidUser(request.resource.data);
+      allow update: if isAuthenticated() && (isAdmin() || (isOwner(uid) && request.resource.data.role == resource.data.role));
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (isAdmin() || isDeliveryBoy() || (isBusinessUser() && resource.data.customerId == request.auth.uid));
+      allow create: if isAuthenticated() && isBusinessUser() && request.resource.data.customerId == request.auth.uid && isValidOrder(request.resource.data);
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (isDeliveryBoy() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
+        (isBusinessUser() && resource.data.customerId == request.auth.uid && resource.data.status == 'placed')
+      );
+    }
+
+    match /settings/global {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /subscriptions/{subId} {
+      allow read: if isAuthenticated() && (isAdmin() || (isBusinessUser() && resource.data.customerId == request.auth.uid));
+      allow write: if isAuthenticated() && (isAdmin() || (isBusinessUser() && request.resource.data.customerId == request.auth.uid));
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "User profile containing role and business details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "business", "delivery"] },
+        "businessName": { "type": "string" },
+        "address": { "type": "string" },
+        "contact": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "customPrice": { "type": "number", "description": "Custom price per kg for this client" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "role"]
+    },
+    "orders": {
+      "title": "Order",
+      "description": "Order details for chicken supply",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["whole", "curry-cut", "boneless", "custom-cut"] },
+              "quantity": { "type": "number" },
+              "pricePerKg": { "type": "number" }
+            }
+          }
+        },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["placed", "confirmed", "packed", "out-for-delivery", "delivered", "rejected"] },
+        "deliveryDate": { "type": "string", "format": "date" },
+        "timeSlot": { "type": "string" },
+        "notes": { "type": "string" },
+        "deliveryBoyId": { "type": "string" },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerId", "items", "totalAmount", "status", "deliveryDate"]
+    },
+    "settings": {
+      "title": "Global Settings",
+      "description": "Global settings like daily chicken rate",
+      "type": "object",
+      "properties": {
+        "dailyRate": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "subscriptions": {
+      "title": "Subscription",
+      "description": "Recurring orders for business users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "items": { "type": "array" },
+        "frequency": { "type": "string", "enum": ["daily", "weekly"] },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "users", "description": "User profiles" },
+    "/orders/{orderId}": { "schema": "orders", "description": "Order records" },
+    "/settings/global": { "schema": "settings", "description": "Global application settings" },
+    "/subscriptions/{subId}": { "schema": "subscriptions", "description": "Subscription records" }
+  }
+}
