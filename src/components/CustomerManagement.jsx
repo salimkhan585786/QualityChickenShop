@@ -1,28 +1,65 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { Users, Phone, MapPin, Save,ChevronDown, ChevronUp } from 'lucide-react';
 import { db } from '../firebase';
-import { Users, Phone, MapPin, Edit2, Save, X } from 'lucide-react';
-import { formatCurrency } from '../lib/utils';
+import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductRates } from '../lib/utils';
 
 export default function CustomerManagement() {
   const [customers, setCustomers] = useState([]);
+  const [settings, setSettings] = useState(null);
   const [editingId, setEditingId] = useState(null);
-  const [editPrice, setEditPrice] = useState('');
+  const [draftRates, setDraftRates] = useState({});
   const [loading, setLoading] = useState(false);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, 'users'), where('role', '==', 'business'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setCustomers(snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id })));
+    const unsubscribeCustomers = onSnapshot(q, (snapshot) => {
+      setCustomers(snapshot.docs.map((customerDoc) => ({ ...customerDoc.data(), uid: customerDoc.id })));
     });
-    return () => unsubscribe();
-  }, []);
 
-  const handleUpdatePrice = async (uid) => {
+    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'global'), (settingsDoc) => {
+      setSettings(settingsDoc.exists() ? settingsDoc.data() : null);
+    });
+
+    return () => {
+      unsubscribeCustomers();
+      unsubscribeSettings();
+    };
+  }, []);
+ const toggleAccordion = (uid) => {
+  setOpenCustomerId((prev) => (prev === uid ? null : uid));
+};
+  const startEditing = (customer) => {
+    setEditingId(customer.uid);
+    setDraftRates(getBusinessProductRates(settings, customer));
+  };
+
+  const handleDraftRateChange = (productId, value) => {
+    setDraftRates((current) => ({
+      ...current,
+      [productId]: value,
+    }));
+  };
+
+  const saveCustomRates = async (customer) => {
     setLoading(true);
+
     try {
-      await updateDoc(doc(db, 'users', uid), {
-        customPrice: editPrice === '' ? null : parseFloat(editPrice),
+      const globalRates = getProductRates(settings);
+      const customProductRates = {};
+
+      PRODUCT_DEFINITIONS.forEach((product) => {
+        const rawValue = draftRates[product.id];
+        const parsedValue = parseFloat(rawValue);
+
+        if (!Number.isNaN(parsedValue) && parsedValue !== globalRates[product.id]) {
+          customProductRates[product.id] = parsedValue;
+        }
+      });
+
+      await updateDoc(doc(db, 'users', customer.uid), {
+        customProductRates,
       });
       setEditingId(null);
     } catch (err) {
@@ -37,67 +74,101 @@ export default function CustomerManagement() {
       <h2 className="text-2xl font-bold text-gray-900">Customers</h2>
 
       <div className="space-y-4">
-        {customers.map((customer) => (
-          <div key={customer.uid} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
-            <div className="flex justify-between items-start">
+        {customers.map((customer) => {
+          const effectiveRates = getBusinessProductRates(settings, customer);
+
+          return (
+           <div
+  key={customer.uid}
+  className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 cursor-pointer"
+  onClick={() => toggleAccordion(customer.uid)}
+>
               <div className="flex gap-3">
                 <div className="bg-orange-100 w-12 h-12 rounded-2xl flex items-center justify-center text-orange-600">
                   <Users size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">{customer.businessName}</h3>
+                 <h3 className="font-bold text-gray-900 flex items-center justify-between">
+  {customer.businessName}
+  {openCustomerId === customer.uid ? (
+    <ChevronUp size={16} className="text-gray-500 ml-2" />
+  ) : (
+    <ChevronDown
+  size={16}
+  className={`text-gray-500 transition-transform duration-200 ml-2 ${
+    openCustomerId === customer.uid ? 'rotate-180' : ''
+  }`}
+/>
+  )}
+</h3>
+                   
                   <p className="text-xs text-gray-500 flex items-center gap-1"><Phone size={10} /> {customer.contact}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pricing</p>
-                <p className="font-bold text-orange-600">
-                  {customer.customPrice ? formatCurrency(customer.customPrice) : 'Global Rate'}
-                </p>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-xl">
-              <MapPin size={14} className="flex-shrink-0" />
-              <span className="line-clamp-1">{customer.address}</span>
-            </div>
-
-            {editingId === customer.uid ? (
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  placeholder="Custom rate (leave empty for global)"
-                  className="flex-1 bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                />
-                <button 
-                  onClick={() => handleUpdatePrice(customer.uid)}
-                  disabled={loading}
-                  className="bg-green-600 text-white p-2 rounded-xl"
-                >
-                  <Save size={20} />
-                </button>
-                <button 
-                  onClick={() => setEditingId(null)}
-                  className="bg-gray-200 text-gray-600 p-2 rounded-xl"
-                >
-                  <X size={20} />
-                </button>
+              <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-xl">
+                <MapPin size={14} className="flex-shrink-0" />
+                <span className="line-clamp-1">{customer.address}</span>
               </div>
-            ) : (
-              <button 
-                onClick={() => {
-                  setEditingId(customer.uid);
-                  setEditPrice(customer.customPrice?.toString() || '');
-                }}
-                className="w-full bg-gray-100 text-gray-700 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
-              >
-                <Edit2 size={16} /> Edit Pricing
-              </button>
-            )}
-          </div>
-        ))}
+
+           {openCustomerId === customer.uid && (
+  <div
+    className="bg-gray-50 rounded-2xl p-4 space-y-2 mt-4"
+    onClick={(e) => e.stopPropagation()} // 🔥 IMPORTANT (prevents closing when clicking inside)
+  >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-gray-900">Business Rates</p>
+                  {editingId === customer.uid ? (
+                    <button
+                      onClick={() => saveCustomRates(customer)}
+                      disabled={loading}
+                      className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <Save size={14} />
+                      {loading ? 'Saving...' : 'Save Rates'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => startEditing(customer)}
+                      className="bg-orange-600 text-white px-3 py-2 rounded-xl text-xs font-bold"
+                    >
+                      Edit Custom Rates
+                    </button>
+                  )}
+                </div>
+
+                {PRODUCT_DEFINITIONS.map((product) => (
+                  <div key={product.id} className="grid grid-cols-[1fr_auto] gap-3 items-center">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{product.name}</p>
+                      <p className="text-xs text-gray-500">
+                        Global: {formatCurrency(getProductRates(settings)[product.id] || 0)}/kg
+                      </p>
+                    </div>
+                    {editingId === customer.uid ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-28 bg-white border border-gray-200 px-3 py-2 rounded-xl text-sm font-bold text-right"
+                        value={draftRates[product.id] ?? ''}
+                        onChange={(e) => handleDraftRateChange(product.id, e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-sm font-bold text-orange-600">{formatCurrency(effectiveRates[product.id] || 0)}/kg</p>
+                    )}
+                  </div>
+                ))}
+
+                {editingId === customer.uid && (
+                  <p className="text-xs text-gray-500">
+                    Leave any product equal to the global rate if you do not want a special business rate for that product.
+                  </p>
+                )}
+              </div>
+        )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

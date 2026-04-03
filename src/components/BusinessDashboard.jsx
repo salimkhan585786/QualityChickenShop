@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy, limit, doc } from 'firebase/firestore';
+import { Link } from 'react-router-dom';
+import { Package, Clock, CreditCard, ChevronRight, ShoppingCart } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
-import { Package, Clock, CreditCard, ChevronRight, ShoppingCart } from 'lucide-react';
-import { formatCurrency, cn } from '../lib/utils';
-import { Link } from 'react-router-dom';
+import { cn, formatCurrency, getBusinessProductRates, getPaymentStatusMeta, getProductLabel, hasCustomProductRates, PRODUCT_DEFINITIONS } from '../lib/utils';
 
 export default function BusinessDashboard() {
   const { user, profile } = useAuth();
@@ -15,7 +15,6 @@ export default function BusinessDashboard() {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch orders
     const q = query(
       collection(db, 'orders'),
       where('customerId', '==', user.uid),
@@ -24,15 +23,12 @@ export default function BusinessDashboard() {
     );
 
     const unsubscribeOrders = onSnapshot(q, (snapshot) => {
-      setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setOrders(snapshot.docs.map((orderDoc) => ({ id: orderDoc.id, ...orderDoc.data() })));
       setLoading(false);
     });
 
-    // Fetch global settings (daily rate)
-    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'global'), (doc) => {
-      if (doc.exists()) {
-        setSettings(doc.data());
-      }
+    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'global'), (settingsDoc) => {
+      setSettings(settingsDoc.exists() ? settingsDoc.data() : null);
     });
 
     return () => {
@@ -41,11 +37,12 @@ export default function BusinessDashboard() {
     };
   }, [user]);
 
+  const productRates = getBusinessProductRates(settings, profile);
   const outstandingPayment = orders
-    .filter(o => o.paymentStatus === 'pending')
-    .reduce((acc, curr) => acc + curr.totalAmount, 0);
-
-  const upcomingDeliveries = orders.filter(o => o.status !== 'delivered' && o.status !== 'rejected');
+    .filter((order) => order.status === 'delivered' && order.paymentStatus !== 'paid')
+    .reduce((acc, order) => acc + order.totalAmount, 0);
+  const upcomingDeliveries = orders.filter((order) => order.status !== 'delivered' && order.status !== 'rejected');
+  const rateSourceLabel = hasCustomProductRates(profile) ? 'Your Custom Rates' : 'Global Daily Rates';
 
   return (
     <div className="space-y-6">
@@ -53,12 +50,15 @@ export default function BusinessDashboard() {
         <div className="relative z-10">
           <p className="text-orange-100 text-sm font-medium">Welcome back,</p>
           <h2 className="text-2xl font-bold">{profile?.businessName}</h2>
-          <div className="mt-4 flex justify-between items-end">
+          <div className="mt-4 flex justify-between items-end gap-4">
             <div>
-              <p className="text-orange-100 text-xs uppercase tracking-wider">Today's Rate</p>
-              <p className="text-3xl font-bold">{settings ? formatCurrency(settings.dailyRate) : '---'}<span className="text-sm font-normal">/kg</span></p>
+              <p className="text-orange-100 text-xs uppercase tracking-wider">{rateSourceLabel}</p>
+              <p className="text-lg font-bold">{PRODUCT_DEFINITIONS.length} products by kg</p>
+              <p className="text-orange-100 text-xs mt-1">
+                Breast Boneless: {formatCurrency(productRates['breast-boneless'] || 0)}/kg
+              </p>
             </div>
-            <Link 
+            <Link
               to="/business/order"
               className="bg-white text-orange-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-sm active:scale-95 transition-transform"
             >
@@ -68,6 +68,18 @@ export default function BusinessDashboard() {
           </div>
         </div>
         <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-orange-500 rounded-full opacity-20 blur-3xl"></div>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+        <h3 className="font-bold text-gray-900 mb-3">Current Rates</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {PRODUCT_DEFINITIONS.map((product) => (
+            <div key={product.id} className="bg-gray-50 rounded-xl p-3">
+              <p className="text-sm font-medium text-gray-800">{product.name}</p>
+              <p className="text-sm font-bold text-orange-600 mt-1">{formatCurrency(productRates[product.id] || 0)}/kg</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -97,7 +109,7 @@ export default function BusinessDashboard() {
 
         {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-200 animate-pulse rounded-2xl"></div>)}
+            {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-gray-200 animate-pulse rounded-2xl"></div>)}
           </div>
         ) : orders.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
@@ -106,36 +118,46 @@ export default function BusinessDashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            {orders.map((order) => (
-              <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center",
-                    order.status === 'delivered' ? "bg-green-50 text-green-600" : "bg-orange-50 text-orange-600"
-                  )}>
-                    <Package size={20} />
+            {orders.map((order) => {
+              const paymentMeta = getPaymentStatusMeta(order.paymentStatus);
+
+              return (
+                <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'w-10 h-10 rounded-xl flex items-center justify-center',
+                      order.status === 'delivered' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+                    )}>
+                      <Package size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">{getProductLabel(order.items?.[0]?.type)}{order.items?.length > 1 ? '...' : ''}</p>
+                      <p className="text-xs text-gray-500">{order.deliveryDate} • {order.timeSlot}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900">{order.items[0]?.type.replace('-', ' ')}...</p>
-                    <p className="text-xs text-gray-500">{order.deliveryDate} • {order.timeSlot}</p>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900">{formatCurrency(order.totalAmount)}</p>
+                    <p className={cn(
+                      'text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block',
+                      order.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                    )}>
+                      {order.status.replace('-', ' ')}
+                    </p>
+                    <p className={cn(
+                      'text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block mt-1',
+                      paymentMeta.className
+                    )}>
+                      {paymentMeta.label}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">{formatCurrency(order.totalAmount)}</p>
-                  <p className={cn(
-                    "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block",
-                    order.status === 'delivered' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                  )}>
-                    {order.status.replace('-', ' ')}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      <button 
+      <button
         className="w-full bg-green-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
         onClick={() => window.open('https://wa.me/917039728960', '_blank')}
       >

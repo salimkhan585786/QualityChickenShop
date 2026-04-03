@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../App';
-import { formatCurrency } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Minus, Trash2, Calendar, Clock, ArrowRight } from 'lucide-react';
-
-const PRODUCT_TYPES = [
-  { id: 'whole', name: 'Whole Chicken' },
-  { id: 'curry-cut', name: 'Curry Cut' },
-  { id: 'boneless', name: 'Boneless' },
-  { id: 'custom-cut', name: 'Custom Cut' },
-];
+import { db } from '../firebase';
+import { useAuth } from '../App';
+import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductLabel, hasCustomProductRates } from '../lib/utils';
 
 export default function OrderForm() {
   const { user, profile } = useAuth();
@@ -24,17 +17,30 @@ export default function OrderForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (doc) => {
-      if (doc.exists()) {
-        setSettings(doc.data());
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (settingsDoc) => {
+      if (settingsDoc.exists()) {
+        setSettings(settingsDoc.data());
+      } else {
+        setSettings(null);
       }
     });
+
     return () => unsubscribe();
   }, []);
 
-  const addItem = (type) => {
-    const rate = profile?.customPrice || settings?.dailyRate || 0;
-    setItems([...items, { type, quantity: 1, pricePerKg: rate }]);
+  const productRates = getBusinessProductRates(settings, profile);
+
+  const toggleItem = (type) => {
+    setItems((current) => {
+      const existingItem = current.find((item) => item.type === type);
+
+      if (existingItem) {
+        return current.filter((item) => item.type !== type);
+      }
+
+      const rate = productRates[type] || 0;
+      return [...current, { type, quantity: 1, pricePerKg: rate }];
+    });
   };
 
   const updateQuantity = (index, delta) => {
@@ -43,11 +49,18 @@ export default function OrderForm() {
     setItems(newItems);
   };
 
-  const removeItem = (index) => {
-    setItems(items.filter((_, i) => i !== index));
+  const updateQuantityInput = (index, value) => {
+    const parsedValue = parseFloat(value);
+    const newItems = [...items];
+    newItems[index].quantity = Number.isNaN(parsedValue) ? '' : Math.max(0.5, parsedValue);
+    setItems(newItems);
   };
 
-  const totalAmount = items.reduce((acc, curr) => acc + curr.quantity * curr.pricePerKg, 0);
+  const removeItem = (type) => {
+    setItems((current) => current.filter((item) => item.type !== type));
+  };
+
+  const totalAmount = items.reduce((acc, curr) => acc + (Number(curr.quantity) || 0) * curr.pricePerKg, 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,7 +79,7 @@ export default function OrderForm() {
         deliveryDate,
         timeSlot,
         notes,
-        paymentStatus: 'pending',
+        paymentStatus: 'unpaid',
         createdAt: serverTimestamp(),
       });
       navigate('/business');
@@ -81,23 +94,31 @@ export default function OrderForm() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">New Order</h2>
-        <div className="text-right">
-          <p className="text-xs text-gray-500 uppercase font-bold">Current Rate</p>
-          <p className="text-lg font-bold text-orange-600">{formatCurrency(profile?.customPrice || settings?.dailyRate || 0)}/kg</p>
-        </div>
       </div>
 
       <div className="space-y-3">
         <p className="text-sm font-bold text-gray-700">Select Product</p>
         <div className="grid grid-cols-2 gap-2">
-          {PRODUCT_TYPES.map(p => (
-            <button
-              key={p.id}
-              onClick={() => addItem(p.id)}
-              className="bg-white border border-gray-200 p-3 rounded-2xl text-sm font-medium hover:border-orange-500 active:bg-orange-50 transition-all text-center"
-            >
-              {p.name}
-            </button>
+          {PRODUCT_DEFINITIONS.map((product) => (
+            (() => {
+              const isSelected = items.some((item) => item.type === product.id);
+
+              return (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => toggleItem(product.id)}
+                  className={`p-3 rounded-2xl text-sm font-medium transition-all text-center border ${
+                    isSelected
+                      ? 'bg-orange-50 border-orange-500 text-orange-700 shadow-sm'
+                      : 'bg-white border-gray-200 hover:border-orange-500 active:bg-orange-50'
+                  }`}
+                >
+                  <p className="font-bold">{product.name}</p>
+                  <p className="text-xs mt-1">{formatCurrency(productRates[product.id] || 0)}/kg</p>
+                </button>
+              );
+            })()
           ))}
         </div>
       </div>
@@ -107,18 +128,26 @@ export default function OrderForm() {
           <p className="text-sm font-bold text-gray-700">Your Cart</p>
           <div className="space-y-2">
             {items.map((item, index) => (
-              <div key={index} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+              <div key={item.type} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
                 <div>
-                  <p className="font-bold text-gray-900 capitalize">{item.type.replace('-', ' ')}</p>
+                  <p className="font-bold text-gray-900">{getProductLabel(item.type)}</p>
                   <p className="text-xs text-gray-500">{formatCurrency(item.pricePerKg)}/kg</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center bg-gray-100 rounded-xl p-1">
-                    <button onClick={() => updateQuantity(index, -0.5)} className="p-1 text-gray-500"><Minus size={16} /></button>
-                    <span className="w-12 text-center font-bold text-sm">{item.quantity}kg</span>
-                    <button onClick={() => updateQuantity(index, 0.5)} className="p-1 text-gray-500"><Plus size={16} /></button>
+                    <button type="button" onClick={() => updateQuantity(index, -0.5)} className="p-1 text-gray-500"><Minus size={16} /></button>
+                    <input
+                      type="number"
+                      min="0.5"
+                      step="0.5"
+                      className="w-14 bg-transparent text-center font-bold text-sm outline-none"
+                      value={item.quantity}
+                      onChange={(e) => updateQuantityInput(index, e.target.value)}
+                    />
+                    <span className="text-xs text-gray-500 pr-1">kg</span>
+                    <button type="button" onClick={() => updateQuantity(index, 0.5)} className="p-1 text-gray-500"><Plus size={16} /></button>
                   </div>
-                  <button onClick={() => removeItem(index)} className="text-red-400 p-1"><Trash2 size={18} /></button>
+                  <button type="button" onClick={() => removeItem(item.type)} className="text-red-400 p-1"><Trash2 size={18} /></button>
                 </div>
               </div>
             ))}
