@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, orderBy, limit, doc, updateDoc, where, serverTimestamp } from 'firebase/firestore';
+import { Link } from 'react-router-dom';
+import { collection, query, onSnapshot, orderBy, limit, doc, updateDoc, where, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Package, Users, TrendingUp, Clock, CheckCircle, Truck, XCircle, CreditCard, Calendar, CalendarRange, IndianRupee, Building2, Filter } from 'lucide-react';
 import { db } from '../firebase';
-import { cn, formatCurrency, getPaymentStatusMeta, getProductLabel, getProductRates } from '../lib/utils';
+import { cn, formatCurrency, formatOrderItems, getOrderDetailsPath, getPaymentStatusMeta } from '../lib/utils';
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [settings, setSettings] = useState(null);
   const [customers, setCustomers] = useState([]);
+  const [deliveryBoys, setDeliveryBoys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -33,10 +35,16 @@ export default function AdminDashboard() {
       setCustomers(snapshot.docs.map((customerDoc) => ({ uid: customerDoc.id, ...customerDoc.data() })));
     });
 
+    const qDelivery = query(collection(db, 'users'), where('role', '==', 'delivery'));
+    const unsubscribeDelivery = onSnapshot(qDelivery, (snapshot) => {
+      setDeliveryBoys(snapshot.docs.map((deliveryDoc) => ({ uid: deliveryDoc.id, ...deliveryDoc.data() })));
+    });
+
     return () => {
       unsubscribeOrders();
       unsubscribeSettings();
       unsubscribeCustomers();
+      unsubscribeDelivery();
     };
   }, []);
 
@@ -47,9 +55,29 @@ export default function AdminDashboard() {
     outstandingAmount: orders.filter((order) => order.status === 'delivered' && order.paymentStatus !== 'paid').reduce((acc, order) => acc + order.totalAmount, 0),
     activeCustomers: customers.length,
   };
-  const updateOrderStatus = async (orderId, status) => {
+
+  const updateOrderStatus = async (orderId, status, order) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), { status });
+      const updatePayload = { status };
+
+      if (status === 'confirmed' && !order?.deliveryBoyId && deliveryBoys.length > 0) {
+        const currentCursor = settings?.autoAssignCursor || 0;
+        const nextAssignee = deliveryBoys[currentCursor % deliveryBoys.length];
+        updatePayload.deliveryBoyId = nextAssignee.uid;
+        updatePayload.deliveryBoyName =
+          nextAssignee.name ||
+          nextAssignee.fullName ||
+          nextAssignee.displayName ||
+          nextAssignee.businessName ||
+          nextAssignee.email ||
+          'Assigned';
+
+        await setDoc(doc(db, 'settings', 'global'), {
+          autoAssignCursor: (currentCursor + 1) % deliveryBoys.length,
+        }, { merge: true });
+      }
+
+      await updateDoc(doc(db, 'orders', orderId), updatePayload);
     } catch (err) {
       console.error(err);
     }
@@ -66,7 +94,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const productRates = getProductRates(settings);
   const filteredOrders = orders.filter((order) => {
     const matchesSelectedDate = !selectedDate || order.deliveryDate === selectedDate;
     const matchesDateFrom = !dateFrom || order.deliveryDate >= dateFrom;
@@ -77,6 +104,7 @@ export default function AdminDashboard() {
 
     return matchesSelectedDate && matchesDateFrom && matchesDateTo && matchesCustomer && matchesMinPrice && matchesMaxPrice;
   });
+
   const filteredPaymentRequests = filteredOrders.filter((order) => order.status === 'delivered' && order.paymentStatus === 'payment-submitted');
 
   return (
@@ -96,91 +124,91 @@ export default function AdminDashboard() {
       </div>
 
       {showFilters && (
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-        <div className="flex items-center gap-2">
-          <Filter size={18} className="text-orange-600" />
-          <h3 className="font-bold text-gray-900">Filters</h3>
-        </div>
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-orange-600" />
+            <h3 className="font-bold text-gray-900">Filters</h3>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <Calendar size={12} /> Exact Date
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <CalendarRange size={12} /> Date From
-            </label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <CalendarRange size={12} /> Date To
-            </label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <Building2 size={12} /> Business
-            </label>
-            <select
-              value={selectedCustomer}
-              onChange={(e) => setSelectedCustomer(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-            >
-              <option value="">All Businesses</option>
-              {customers.map((customer) => (
-                <option key={customer.uid || customer.email || customer.businessName} value={customer.uid}>
-                  {customer.businessName}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <IndianRupee size={12} /> Min Price
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-              placeholder="0"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <IndianRupee size={12} /> Max Price
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-              placeholder="0"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <Calendar size={12} /> Exact Date
+              </label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <CalendarRange size={12} /> Date From
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <CalendarRange size={12} /> Date To
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <Building2 size={12} /> Business
+              </label>
+              <select
+                value={selectedCustomer}
+                onChange={(e) => setSelectedCustomer(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              >
+                <option value="">All Businesses</option>
+                {customers.map((customer) => (
+                  <option key={customer.uid || customer.email || customer.businessName} value={customer.uid}>
+                    {customer.businessName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <IndianRupee size={12} /> Min Price
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <IndianRupee size={12} /> Max Price
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                placeholder="0"
+              />
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
@@ -235,15 +263,15 @@ export default function AdminDashboard() {
         ) : (
           <div className="space-y-3">
             {filteredPaymentRequests.map((order) => (
-              <div key={order.id} className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex justify-between items-center">
-                <div>
+              <div key={order.id} className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex justify-between items-center gap-3">
+                <Link to={getOrderDetailsPath('admin', order.id)} className="min-w-0 flex-1">
                   <p className="font-bold text-gray-900">{order.customerName}</p>
-                  <p className="text-xs text-gray-600">{getProductLabel(order.items?.[0]?.type)}{order.items?.length > 1 ? '...' : ''}</p>
+                  <p className="text-xs text-gray-600 break-words">{formatOrderItems(order.items)}</p>
                   <p className="text-xs text-blue-700 font-medium">Business marked this order as paid</p>
-                </div>
+                </Link>
                 <button
                   onClick={() => updatePaymentStatus(order.id, 'paid')}
-                  className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1"
+                  className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 flex-shrink-0"
                 >
                   <CreditCard size={14} /> Confirm Paid
                 </button>
@@ -266,13 +294,13 @@ export default function AdminDashboard() {
 
               return (
                 <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
+                  <Link to={getOrderDetailsPath('admin', order.id)} className="flex justify-between items-start gap-4 transition-colors hover:text-orange-600">
+                    <div className="min-w-0">
                       <p className="font-bold text-gray-900">{order.customerName}</p>
-                      <p className="text-xs text-gray-500">{getProductLabel(order.items?.[0]?.type)}{order.items?.length > 1 ? '...' : ''}</p>
+                      <p className="text-xs text-gray-500 break-words">{formatOrderItems(order.items)}</p>
                       <p className="text-xs text-gray-500">{order.deliveryDate} • {order.timeSlot}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="font-bold text-orange-600">{formatCurrency(order.totalAmount)}</p>
                       <p className={cn(
                         'text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block',
@@ -287,12 +315,12 @@ export default function AdminDashboard() {
                         {paymentMeta.label}
                       </p>
                     </div>
-                  </div>
+                  </Link>
 
                   <div className="border-t pt-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                     {order.status === 'placed' && (
                       <button
-                        onClick={() => updateOrderStatus(order.id, 'confirmed')}
+                        onClick={() => updateOrderStatus(order.id, 'confirmed', order)}
                         className="flex-shrink-0 bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
                         <CheckCircle size={14} /> Confirm
@@ -300,7 +328,7 @@ export default function AdminDashboard() {
                     )}
                     {order.status === 'confirmed' && (
                       <button
-                        onClick={() => updateOrderStatus(order.id, 'packed')}
+                        onClick={() => updateOrderStatus(order.id, 'packed', order)}
                         className="flex-shrink-0 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
                         <Package size={14} /> Packed
@@ -308,7 +336,7 @@ export default function AdminDashboard() {
                     )}
                     {order.status === 'packed' && (
                       <button
-                        onClick={() => updateOrderStatus(order.id, 'out-for-delivery')}
+                        onClick={() => updateOrderStatus(order.id, 'out-for-delivery', order)}
                         className="flex-shrink-0 bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
                         <Truck size={14} /> Out for Delivery
@@ -316,7 +344,7 @@ export default function AdminDashboard() {
                     )}
                     {order.status !== 'delivered' && order.status !== 'rejected' && (
                       <button
-                        onClick={() => updateOrderStatus(order.id, 'rejected')}
+                        onClick={() => updateOrderStatus(order.id, 'rejected', order)}
                         className="flex-shrink-0 bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
                         <XCircle size={14} /> Reject

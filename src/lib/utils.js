@@ -37,6 +37,33 @@ export function getProductLabel(productId) {
   return PRODUCT_LABELS[productId] || productId || 'Product';
 }
 
+export function formatOrderItems(items = []) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 'No products';
+  }
+
+  return items
+    .map((item) => {
+      const productName = getProductLabel(item?.type);
+      const quantity = Number(item?.quantity);
+
+      if (Number.isFinite(quantity) && quantity > 0) {
+        return `${productName} (${quantity} kg)`;
+      }
+
+      return productName;
+    })
+    .join(', ');
+}
+
+export function getOrderDetailsPath(role, orderId) {
+  if (!role || !orderId) {
+    return '/';
+  }
+
+  return `/${role}/orders/${orderId}`;
+}
+
 export function getProductRates(settings) {
   return {
     ...DEFAULT_PRODUCT_RATES,

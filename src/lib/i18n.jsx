@@ -1,0 +1,216 @@
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+
+const LANGUAGE_STORAGE_KEY = 'chicken-supply-language';
+
+const translations = {
+  en: {
+    'language.select': 'Select Language',
+    'language.english': 'English',
+    'language.hindi': 'Hindi',
+    'language.marathi': 'Marathi',
+    'common.close': 'Close',
+    'common.cancel': 'Cancel',
+    'common.save': 'Save',
+    'common.loading': 'Loading...',
+    'common.filters': 'Filters',
+    'common.exactDate': 'Exact Date',
+    'common.dateFrom': 'Date From',
+    'common.dateTo': 'Date To',
+    'common.minPrice': 'Min Price',
+    'common.maxPrice': 'Max Price',
+    'common.noFilteredResults': 'No results match these filters',
+    'nav.dashboard': 'Dashboard',
+    'nav.customers': 'Customers',
+    'nav.pricing': 'Pricing',
+    'nav.delivery': 'Delivery',
+    'nav.newOrder': 'New Order',
+    'nav.history': 'History',
+    'nav.payments': 'Payments',
+    'nav.subscriptions': 'Subscriptions',
+    'login.title': 'Login with your email and password',
+    'login.login': 'Login',
+    'login.register': 'Register here',
+    'register.title': 'Create Account',
+    'business.welcome': 'Welcome back,',
+    'business.pendingOrders': 'Pending Orders',
+    'business.outstanding': 'Outstanding',
+    'business.recentOrders': 'Recent Orders',
+    'business.viewAll': 'View all',
+    'business.currentRates': 'Current Rates',
+    'business.manageSubscriptions': 'Manage Subscriptions',
+    'orderForm.newOrder': 'New Order',
+    'orderForm.editOrder': 'Edit Order',
+    'orderForm.selectProduct': 'Select Product',
+    'orderForm.yourCart': 'Your Cart',
+    'orderForm.date': 'Date',
+    'orderForm.slot': 'Slot',
+    'orderForm.notes': 'Special Instructions',
+    'orderForm.totalAmount': 'Total Amount',
+    'orderForm.placeOrder': 'Place Order Now',
+    'orderForm.updateOrder': 'Update Order',
+    'orderForm.placing': 'Placing Order...',
+    'orderForm.updating': 'Updating Order...',
+    'orderForm.locked': 'This order can no longer be edited because it has already been packed or moved ahead.',
+    'history.title': 'Order History',
+    'history.paymentWaiting': 'Payment Waiting for Admin Confirmation',
+    'history.iHavePaid': 'I Have Paid',
+    'history.updating': 'Updating...',
+    'history.editOrder': 'Edit Order',
+    'payments.title': 'Payments',
+    'payments.subtitle': 'Delivered orders waiting for payment or admin confirmation',
+    'payments.payWithGpay': 'Pay with Google Pay',
+    'payments.waitingAdmin': 'Payment Sent, Waiting for Admin',
+    'payments.opening': 'Opening Google Pay...',
+    'payments.noOrders': 'No unpaid delivered orders',
+    'admin.title': 'Admin Panel',
+    'admin.ordersToday': 'Orders Today',
+    'admin.paidRevenue': 'Paid Revenue',
+    'admin.pending': 'Pending',
+    'admin.outstanding': 'Outstanding',
+    'admin.paymentRequests': 'Payment Requests',
+    'admin.noPaymentRequests': 'No payment confirmations from business yet',
+    'admin.businessMarkedPaid': 'Business marked this order as paid',
+    'admin.confirmPaid': 'Confirm Paid',
+    'admin.incomingOrders': 'Incoming Orders',
+    'admin.confirm': 'Confirm',
+    'admin.packed': 'Packed',
+    'admin.outForDelivery': 'Out for Delivery',
+    'admin.reject': 'Reject',
+    'admin.markPaid': 'Mark Paid',
+    'delivery.title': 'Delivery Dashboard',
+    'delivery.noActive': 'No active deliveries',
+    'delivery.startDelivery': 'Start Delivery',
+    'delivery.markDelivered': 'Mark Delivered',
+    'delivery.previousDeliveries': 'Previous Deliveries',
+    'delivery.noCompleted': 'No completed deliveries match these filters',
+    'deliveryManagement.title': 'Delivery Management',
+    'deliveryManagement.assign': 'Assign Delivery Staff',
+    'customer.title': 'Customers',
+    'pricing.title': 'Pricing Control',
+    'pricing.globalRates': 'Global Daily Rates',
+    'pricing.updateRates': 'Update Daily Rates',
+    'subscription.title': 'Subscriptions',
+    'subscription.new': 'New Subscription',
+    'subscription.edit': 'Edit Subscription',
+    'subscription.active': 'Active',
+    'subscription.cancelSubscription': 'Cancel Subscription',
+    'subscription.days': 'Delivery Days',
+    'subscription.saveNew': 'Create Subscription',
+    'subscription.saveEdit': 'Update Subscription',
+    'subscription.noSubscriptions': 'No subscriptions yet',
+    'subscription.autoInfo': 'Orders are auto-created on scheduled days using your latest subscription details.',
+  },
+  hi: {
+    'language.select': 'भाषा चुनें',
+    'language.english': 'अंग्रेज़ी',
+    'language.hindi': 'हिंदी',
+    'language.marathi': 'मराठी',
+    'common.close': 'बंद करें',
+    'common.cancel': 'रद्द करें',
+    'common.save': 'सेव करें',
+    'common.loading': 'लोड हो रहा है...',
+    'common.filters': 'फ़िल्टर',
+    'common.exactDate': 'सटीक तारीख',
+    'common.dateFrom': 'शुरू तारीख',
+    'common.dateTo': 'अंतिम तारीख',
+    'common.minPrice': 'न्यूनतम कीमत',
+    'common.maxPrice': 'अधिकतम कीमत',
+    'common.noFilteredResults': 'इन फ़िल्टर के लिए कोई परिणाम नहीं मिला',
+    'nav.dashboard': 'डैशबोर्ड',
+    'nav.customers': 'ग्राहक',
+    'nav.pricing': 'रेट',
+    'nav.delivery': 'डिलीवरी',
+    'nav.newOrder': 'नया ऑर्डर',
+    'nav.history': 'इतिहास',
+    'nav.payments': 'पेमेंट',
+    'nav.subscriptions': 'सब्सक्रिप्शन',
+    'business.manageSubscriptions': 'सब्सक्रिप्शन मैनेज करें',
+    'subscription.title': 'सब्सक्रिप्शन',
+    'subscription.new': 'नया सब्सक्रिप्शन',
+    'subscription.edit': 'सब्सक्रिप्शन संपादित करें',
+    'subscription.active': 'सक्रिय',
+    'subscription.cancelSubscription': 'सब्सक्रिप्शन बंद करें',
+    'subscription.days': 'डिलीवरी के दिन',
+    'subscription.saveNew': 'सब्सक्रिप्शन बनाएं',
+    'subscription.saveEdit': 'सब्सक्रिप्शन अपडेट करें',
+    'subscription.noSubscriptions': 'अभी कोई सब्सक्रिप्शन नहीं है',
+    'subscription.autoInfo': 'निर्धारित दिनों में आपके नवीनतम सब्सक्रिप्शन विवरण के अनुसार ऑर्डर अपने आप बनेंगे।',
+  },
+  mr: {
+    'language.select': 'भाषा निवडा',
+    'language.english': 'इंग्रजी',
+    'language.hindi': 'हिंदी',
+    'language.marathi': 'मराठी',
+    'common.close': 'बंद करा',
+    'common.cancel': 'रद्द करा',
+    'common.save': 'जतन करा',
+    'common.loading': 'लोड होत आहे...',
+    'common.filters': 'फिल्टर',
+    'common.exactDate': 'अचूक तारीख',
+    'common.dateFrom': 'सुरुवातीची तारीख',
+    'common.dateTo': 'शेवटची तारीख',
+    'common.minPrice': 'किमान किंमत',
+    'common.maxPrice': 'कमाल किंमत',
+    'common.noFilteredResults': 'या फिल्टरसाठी कोणतेही निकाल नाहीत',
+    'nav.dashboard': 'डॅशबोर्ड',
+    'nav.customers': 'ग्राहक',
+    'nav.pricing': 'दर',
+    'nav.delivery': 'डिलिव्हरी',
+    'nav.newOrder': 'नवीन ऑर्डर',
+    'nav.history': 'इतिहास',
+    'nav.payments': 'पेमेंट',
+    'nav.subscriptions': 'सब्स्क्रिप्शन',
+    'business.manageSubscriptions': 'सब्स्क्रिप्शन व्यवस्थापित करा',
+    'subscription.title': 'सब्स्क्रिप्शन',
+    'subscription.new': 'नवीन सब्स्क्रिप्शन',
+    'subscription.edit': 'सब्स्क्रिप्शन बदला',
+    'subscription.active': 'सक्रिय',
+    'subscription.cancelSubscription': 'सब्स्क्रिप्शन बंद करा',
+    'subscription.days': 'डिलिव्हरी दिवस',
+    'subscription.saveNew': 'सब्स्क्रिप्शन तयार करा',
+    'subscription.saveEdit': 'सब्स्क्रिप्शन अपडेट करा',
+    'subscription.noSubscriptions': 'अजून कोणतेही सब्स्क्रिप्शन नाही',
+    'subscription.autoInfo': 'नियोजित दिवशी तुमच्या नवीनतम सब्स्क्रिप्शननुसार ऑर्डर आपोआप तयार होतील.',
+  },
+};
+
+const languageOptions = [
+  { code: 'en', labelKey: 'language.english' },
+  { code: 'hi', labelKey: 'language.hindi' },
+  { code: 'mr', labelKey: 'language.marathi' },
+];
+
+const I18nContext = createContext(null);
+
+export function I18nProvider({ children }) {
+  const [language, setLanguage] = useState(() => localStorage.getItem(LANGUAGE_STORAGE_KEY) || 'en');
+
+  useEffect(() => {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language]);
+
+  const value = useMemo(() => ({
+    language,
+    setLanguage,
+    languageOptions,
+    t: (key, fallback = key, vars = {}) => {
+      const source = translations[language]?.[key] ?? translations.en[key] ?? fallback;
+      return Object.entries(vars).reduce(
+        (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+        source
+      );
+    },
+  }), [language]);
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useI18n() {
+  const context = useContext(I18nContext);
+
+  if (!context) {
+    throw new Error('useI18n must be used within I18nProvider');
+  }
+
+  return context;
+}

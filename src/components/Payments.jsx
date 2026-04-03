@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { CreditCard, Package, ExternalLink } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
-import { cn, formatCurrency, getPaymentStatusMeta, getProductLabel } from '../lib/utils';
+import { cn, formatCurrency, formatOrderItems, getOrderDetailsPath, getPaymentStatusMeta } from '../lib/utils';
 
 const UPI_ID = 'sk9022522568@okhdfcbank';
 const G_PAY_PAYEE_NAME = 'Quality Chicken Shop';
@@ -17,7 +18,7 @@ function buildGooglePayLink(order) {
 }
 
 export default function Payments() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
@@ -89,17 +90,17 @@ export default function Payments() {
 
             return (
               <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-orange-50 text-orange-600">
+                <Link to={getOrderDetailsPath(profile?.role, order.id)} className="flex justify-between items-center gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-orange-50 text-orange-600 flex-shrink-0">
                       <Package size={20} />
                     </div>
-                    <div>
-                      <p className="font-bold text-gray-900">{getProductLabel(order.items?.[0]?.type)}{order.items?.length > 1 ? '...' : ''}</p>
+                    <div className="min-w-0">
+                      <p className="font-bold text-gray-900 break-words">{formatOrderItems(order.items)}</p>
                       <p className="text-xs text-gray-500">{order.deliveryDate} • {order.timeSlot}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <p className="font-bold text-gray-900">{formatCurrency(order.totalAmount)}</p>
                     <p className={cn(
                       'text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block text-center',
@@ -108,7 +109,7 @@ export default function Payments() {
                       {paymentMeta.label}
                     </p>
                   </div>
-                </div>
+                </Link>
 
                 <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">
                   <span>Order ID: {order.id.slice(-6)}</span>

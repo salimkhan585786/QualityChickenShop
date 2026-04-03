@@ -123,14 +123,21 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{uid} {
-      allow read: if isAuthenticated() && (isOwner(uid) || isAdmin());
+      allow read: if isAuthenticated() && (
+        isOwner(uid) ||
+        isAdmin() ||
+        (isBusinessUser() && resource.data.role == 'delivery')
+      );
       allow create: if isAuthenticated() && isOwner(uid) && isValidUser(request.resource.data);
       allow update: if isAuthenticated() && (isAdmin() || (isOwner(uid) && request.resource.data.role == resource.data.role));
     }
 
     match /orders/{orderId} {
       allow read: if isAuthenticated() && (isAdmin() || isDeliveryBoy() || (isBusinessUser() && resource.data.customerId == request.auth.uid));
-      allow create: if isAuthenticated() && isBusinessUser() && request.resource.data.customerId == request.auth.uid && isValidOrder(request.resource.data);
+      allow create: if isAuthenticated() && (
+        (isBusinessUser() && request.resource.data.customerId == request.auth.uid && isValidOrder(request.resource.data)) ||
+        (isAdmin() && isValidOrder(request.resource.data))
+      );
       allow update: if isAuthenticated() && (
         isAdmin() || 
         (isDeliveryBoy() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
