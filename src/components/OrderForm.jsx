@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp, doc, onSnapshot, getDoc, updateDoc } from 'firebase/firestore';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Minus, Trash2, Calendar, Clock, ArrowRight } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
-import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductLabel, hasCustomProductRates } from '../lib/utils';
+import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductLabel } from '../lib/utils';
 
 export default function OrderForm() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { orderId } = useParams();
+  const isEditMode = Boolean(orderId);
+
   const [settings, setSettings] = useState(null);
   const [items, setItems] = useState([]);
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
   const [timeSlot, setTimeSlot] = useState('08:00 AM - 10:00 AM');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(false);
+  const [editLocked, setEditLocked] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (settingsDoc) => {
@@ -27,6 +32,44 @@ export default function OrderForm() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!isEditMode || !orderId || !user) return;
+
+    const loadOrder = async () => {
+      setInitializing(true);
+
+      try {
+        const orderRef = doc(db, 'orders', orderId);
+        const orderSnap = await getDoc(orderRef);
+
+        if (!orderSnap.exists()) {
+          navigate('/business/history');
+          return;
+        }
+
+        const orderData = orderSnap.data();
+        const canEdit = orderData.customerId === user.uid && ['placed', 'confirmed'].includes(orderData.status);
+
+        if (!canEdit) {
+          setEditLocked(true);
+          return;
+        }
+
+        setItems(orderData.items || []);
+        setDeliveryDate(orderData.deliveryDate || new Date().toISOString().split('T')[0]);
+        setTimeSlot(orderData.timeSlot || '08:00 AM - 10:00 AM');
+        setNotes(orderData.notes || '');
+      } catch (err) {
+        console.error(err);
+        navigate('/business/history');
+      } finally {
+        setInitializing(false);
+      }
+    };
+
+    loadOrder();
+  }, [db, isEditMode, navigate, orderId, user]);
 
   const productRates = getBusinessProductRates(settings, profile);
 
@@ -64,25 +107,39 @@ export default function OrderForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (items.length === 0 || !user) return;
+    if (items.length === 0 || !user || editLocked) return;
     setLoading(true);
 
     try {
-      await addDoc(collection(db, 'orders'), {
-        customerId: user.uid,
-        customerName: profile?.businessName || 'Unknown',
-        customerAddress: profile?.address || '',
-        customerPhone: profile?.contact || '',
-        items,
-        totalAmount,
-        status: 'placed',
-        deliveryDate,
-        timeSlot,
-        notes,
-        paymentStatus: 'unpaid',
-        createdAt: serverTimestamp(),
-      });
-      navigate('/business');
+      if (isEditMode && orderId) {
+        await updateDoc(doc(db, 'orders', orderId), {
+          items,
+          totalAmount,
+          deliveryDate,
+          timeSlot,
+          notes,
+          customerName: profile?.businessName || 'Unknown',
+          customerAddress: profile?.address || '',
+          customerPhone: profile?.contact || '',
+        });
+      } else {
+        await addDoc(collection(db, 'orders'), {
+          customerId: user.uid,
+          customerName: profile?.businessName || 'Unknown',
+          customerAddress: profile?.address || '',
+          customerPhone: profile?.contact || '',
+          items,
+          totalAmount,
+          status: 'placed',
+          deliveryDate,
+          timeSlot,
+          notes,
+          paymentStatus: 'unpaid',
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      navigate('/business/history');
     } catch (err) {
       console.error(err);
     } finally {
@@ -90,36 +147,50 @@ export default function OrderForm() {
     }
   };
 
+  if (initializing) {
+    return (
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 text-sm text-gray-500">
+        Loading order...
+      </div>
+    );
+  }
+
+  if (editLocked) {
+    return (
+      <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-300 text-sm text-gray-500">
+        This order can no longer be edited because it has already been packed or moved ahead.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">New Order</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Edit Order' : 'New Order'}</h2>
       </div>
 
       <div className="space-y-3">
         <p className="text-sm font-bold text-gray-700">Select Product</p>
         <div className="grid grid-cols-2 gap-2">
-          {PRODUCT_DEFINITIONS.map((product) => (
-            (() => {
-              const isSelected = items.some((item) => item.type === product.id);
+          {PRODUCT_DEFINITIONS.map((product) => {
+            const isSelected = items.some((item) => item.type === product.id);
 
-              return (
-                <button
-                  key={product.id}
-                  type="button"
-                  onClick={() => toggleItem(product.id)}
-                  className={`p-3 rounded-2xl text-sm font-medium transition-all text-center border ${
-                    isSelected
-                      ? 'bg-orange-50 border-orange-500 text-orange-700 shadow-sm'
-                      : 'bg-white border-gray-200 hover:border-orange-500 active:bg-orange-50'
-                  }`}
-                >
-                  <p className="font-bold">{product.name}</p>
-                  <p className="text-xs mt-1">{formatCurrency(productRates[product.id] || 0)}/kg</p>
-                </button>
-              );
-            })()
-          ))}
+            return (
+              <button
+                key={product.id}
+                type="button"
+                onClick={() => toggleItem(product.id)}
+                className={`p-3 rounded-2xl text-sm font-medium transition-all text-center border ${
+                  isSelected
+                    ? 'bg-orange-50 border-orange-500 text-orange-700 shadow-sm'
+                    : 'bg-white border-gray-200 hover:border-orange-500 active:bg-orange-50'
+                }`}
+              >
+                <p className="font-bold">{product.name}</p>
+                <p className="text-xs mt-1">{formatCurrency(productRates[product.id] || 0)}/kg</p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -207,7 +278,7 @@ export default function OrderForm() {
           disabled={loading || items.length === 0}
           className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform disabled:opacity-50"
         >
-          {loading ? 'Placing Order...' : 'Place Order Now'}
+          {loading ? (isEditMode ? 'Updating Order...' : 'Placing Order...') : (isEditMode ? 'Update Order' : 'Place Order Now')}
           <ArrowRight size={20} />
         </button>
       </form>

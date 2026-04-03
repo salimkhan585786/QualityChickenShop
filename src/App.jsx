@@ -183,6 +183,7 @@ function BusinessRoutes() {
     <Routes>
       <Route path="/" element={<BusinessDashboard />} />
       <Route path="/order" element={<OrderForm />} />
+      <Route path="/order/:orderId" element={<OrderForm />} />
       <Route path="/history" element={<OrderHistory />} />
       <Route path="/payments" element={<Payments />} />
     </Routes>

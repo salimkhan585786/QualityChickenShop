@@ -3,6 +3,7 @@ import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTi
 import { Package, Calendar, CalendarRange, IndianRupee, Filter } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
+import { Link } from 'react-router-dom';
 import { cn, formatCurrency, getPaymentStatusMeta, getProductLabel } from '../lib/utils';
 
 export default function OrderHistory() {
@@ -10,6 +11,7 @@ export default function OrderHistory() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submittingPaymentId, setSubmittingPaymentId] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -61,76 +63,87 @@ export default function OrderHistory() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
-
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-        <div className="flex items-center gap-2">
-          <Filter size={18} className="text-orange-600" />
-          <h3 className="font-bold text-gray-900">Filters</h3>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <Calendar size={12} /> Exact Date
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <CalendarRange size={12} /> Date From
-            </label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <CalendarRange size={12} /> Date To
-            </label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <IndianRupee size={12} /> Min Price
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-              placeholder="0"
-            />
-          </div>
-          <div className="space-y-1 sm:col-span-2">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <IndianRupee size={12} /> Max Price
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
-              placeholder="0"
-            />
-          </div>
-        </div>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
+        <button
+          type="button"
+          onClick={() => setShowFilters((current) => !current)}
+          className={`p-2 rounded-xl border transition-colors ${showFilters ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-white border-gray-200 text-gray-500'}`}
+        >
+          <Filter size={18} />
+        </button>
       </div>
+
+      {showFilters && (
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-orange-600" />
+            <h3 className="font-bold text-gray-900">Filters</h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <Calendar size={12} /> Exact Date
+              </label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <CalendarRange size={12} /> Date From
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <CalendarRange size={12} /> Date To
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <IndianRupee size={12} /> Min Price
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                <IndianRupee size={12} /> Max Price
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                placeholder="0"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -190,8 +203,17 @@ export default function OrderHistory() {
                       ? 'Payment Waiting for Admin Confirmation'
                       : submittingPaymentId === order.id
                         ? 'Updating...'
-                        : 'I Have Paid'}
+                      : 'I Have Paid'}
                   </button>
+                )}
+
+                {['placed', 'confirmed'].includes(order.status) && (
+                  <Link
+                    to={`/business/order/${order.id}`}
+                    className="block w-full bg-orange-100 text-orange-700 py-2.5 rounded-xl text-sm font-bold text-center"
+                  >
+                    Edit Order
+                  </Link>
                 )}
               </div>
             );
