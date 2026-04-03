@@ -11,6 +11,7 @@ import { auth, db } from './firebase';
 import { LogOut, ShoppingCart, Package, Users, Settings, Truck, Home, History, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { handleFirestoreError, OperationType } from './lib/utils';
+import logo from './image/logo.png';
 
 // Contexts
 const AuthContext = createContext(null);
@@ -57,8 +58,8 @@ const Layout = ({ children, role }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <header className="bg-white border-b sticky top-0 z-10 px-4 py-3 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-orange-600">Quality Chicken Shop</h1>
+      <header className="bg-white border-b top-0 z-99 px-4 py-1 flex justify-between items-center">
+        <img src={logo} alt="Quality Chicken Shop" className="h-20 w-auto object-contain " />
         <button 
           onClick={() => signOut(auth)}
           className="p-2 text-gray-500 hover:text-red-500 transition-colors"

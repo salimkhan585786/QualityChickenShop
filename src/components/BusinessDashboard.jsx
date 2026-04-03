@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy, limit, doc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
-import { Package, Clock, CreditCard, ChevronRight, ShoppingCart } from 'lucide-react';
+import { Package, Clock, CreditCard, ChevronRight, ShoppingCart, Filter, Calendar, CalendarRange, IndianRupee } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
 import { cn, formatCurrency, getBusinessProductRates, getPaymentStatusMeta, getProductLabel, hasCustomProductRates, PRODUCT_DEFINITIONS } from '../lib/utils';
@@ -11,6 +11,12 @@ export default function BusinessDashboard() {
   const [orders, setOrders] = useState([]);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -43,6 +49,15 @@ export default function BusinessDashboard() {
     .reduce((acc, order) => acc + order.totalAmount, 0);
   const upcomingDeliveries = orders.filter((order) => order.status !== 'delivered' && order.status !== 'rejected');
   const rateSourceLabel = hasCustomProductRates(profile) ? 'Your Custom Rates' : 'Global Daily Rates';
+  const filteredOrders = orders.filter((order) => {
+    const matchesSelectedDate = !selectedDate || order.deliveryDate === selectedDate;
+    const matchesDateFrom = !dateFrom || order.deliveryDate >= dateFrom;
+    const matchesDateTo = !dateTo || order.deliveryDate <= dateTo;
+    const matchesMinPrice = minPrice === '' || order.totalAmount >= parseFloat(minPrice);
+    const matchesMaxPrice = maxPrice === '' || order.totalAmount <= parseFloat(maxPrice);
+
+    return matchesSelectedDate && matchesDateFrom && matchesDateTo && matchesMinPrice && matchesMaxPrice;
+  });
 
   return (
     <div className="space-y-6">
@@ -102,23 +117,96 @@ export default function BusinessDashboard() {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="font-bold text-gray-900">Recent Orders</h3>
-          <Link to="/business/history" className="text-orange-600 text-sm font-medium flex items-center">
-            View all <ChevronRight size={16} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowFilters((current) => !current)}
+              className={`p-2 rounded-xl border transition-colors ${showFilters ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-white border-gray-200 text-gray-500'}`}
+            >
+              <Filter size={18} />
+            </button>
+            <Link to="/business/history" className="text-orange-600 text-sm font-medium flex items-center">
+              View all <ChevronRight size={16} />
+            </Link>
+          </div>
         </div>
+
+        {showFilters && (
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                  <Calendar size={12} /> Exact Date
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                  <CalendarRange size={12} /> Date From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                  <CalendarRange size={12} /> Date To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                  <IndianRupee size={12} /> Min Price
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                  <IndianRupee size={12} /> Max Price
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-gray-200 animate-pulse rounded-2xl"></div>)}
           </div>
-        ) : orders.length === 0 ? (
+        ) : filteredOrders.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
             <Package className="mx-auto text-gray-300 mb-2" size={40} />
-            <p className="text-gray-500 text-sm">No orders yet</p>
+            <p className="text-gray-500 text-sm">No orders match these filters</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {orders.map((order) => {
+            {filteredOrders.map((order) => {
               const paymentMeta = getPaymentStatusMeta(order.paymentStatus);
 
               return (

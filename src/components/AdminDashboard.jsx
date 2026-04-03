@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, orderBy, limit, doc, updateDoc, where, serverTimestamp } from 'firebase/firestore';
-import { Package, Users, TrendingUp, Clock, CheckCircle, Truck, XCircle, CreditCard } from 'lucide-react';
+import { Package, Users, TrendingUp, Clock, CheckCircle, Truck, XCircle, CreditCard, Calendar, CalendarRange, IndianRupee, Building2, Filter } from 'lucide-react';
 import { db } from '../firebase';
 import { cn, formatCurrency, getPaymentStatusMeta, getProductLabel, getProductRates } from '../lib/utils';
 
@@ -9,6 +9,13 @@ export default function AdminDashboard() {
   const [settings, setSettings] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(20));
@@ -23,7 +30,7 @@ export default function AdminDashboard() {
 
     const qCustomers = query(collection(db, 'users'), where('role', '==', 'business'));
     const unsubscribeCustomers = onSnapshot(qCustomers, (snapshot) => {
-      setCustomers(snapshot.docs.map((customerDoc) => customerDoc.data()));
+      setCustomers(snapshot.docs.map((customerDoc) => ({ uid: customerDoc.id, ...customerDoc.data() })));
     });
 
     return () => {
@@ -40,8 +47,6 @@ export default function AdminDashboard() {
     outstandingAmount: orders.filter((order) => order.status === 'delivered' && order.paymentStatus !== 'paid').reduce((acc, order) => acc + order.totalAmount, 0),
     activeCustomers: customers.length,
   };
-  const paymentRequests = orders.filter((order) => order.status === 'delivered' && order.paymentStatus === 'payment-submitted');
-
   const updateOrderStatus = async (orderId, status) => {
     try {
       await updateDoc(doc(db, 'orders', orderId), { status });
@@ -62,12 +67,121 @@ export default function AdminDashboard() {
   };
 
   const productRates = getProductRates(settings);
+  const filteredOrders = orders.filter((order) => {
+    const matchesSelectedDate = !selectedDate || order.deliveryDate === selectedDate;
+    const matchesDateFrom = !dateFrom || order.deliveryDate >= dateFrom;
+    const matchesDateTo = !dateTo || order.deliveryDate <= dateTo;
+    const matchesCustomer = !selectedCustomer || order.customerId === selectedCustomer;
+    const matchesMinPrice = minPrice === '' || order.totalAmount >= parseFloat(minPrice);
+    const matchesMaxPrice = maxPrice === '' || order.totalAmount <= parseFloat(maxPrice);
+
+    return matchesSelectedDate && matchesDateFrom && matchesDateTo && matchesCustomer && matchesMinPrice && matchesMaxPrice;
+  });
+  const filteredPaymentRequests = filteredOrders.filter((order) => order.status === 'delivered' && order.paymentStatus === 'payment-submitted');
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Admin Panel</h2>
       </div>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowFilters((current) => !current)}
+          className={`p-2 rounded-xl border transition-colors ${showFilters ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-white border-gray-200 text-gray-500'}`}
+        >
+          <Filter size={18} />
+        </button>
+      </div>
+
+      {showFilters && (
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+        <div className="flex items-center gap-2">
+          <Filter size={18} className="text-orange-600" />
+          <h3 className="font-bold text-gray-900">Filters</h3>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <Calendar size={12} /> Exact Date
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <CalendarRange size={12} /> Date From
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <CalendarRange size={12} /> Date To
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <Building2 size={12} /> Business
+            </label>
+            <select
+              value={selectedCustomer}
+              onChange={(e) => setSelectedCustomer(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+            >
+              <option value="">All Businesses</option>
+              {customers.map((customer) => (
+                <option key={customer.uid || customer.email || customer.businessName} value={customer.uid}>
+                  {customer.businessName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <IndianRupee size={12} /> Min Price
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="0"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <IndianRupee size={12} /> Max Price
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
@@ -114,13 +228,13 @@ export default function AdminDashboard() {
 
       <div className="space-y-3">
         <h3 className="font-bold text-gray-900">Payment Requests</h3>
-        {paymentRequests.length === 0 ? (
+        {filteredPaymentRequests.length === 0 ? (
           <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
             No payment confirmations from business yet
           </div>
         ) : (
           <div className="space-y-3">
-            {paymentRequests.map((order) => (
+            {filteredPaymentRequests.map((order) => (
               <div key={order.id} className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex justify-between items-center">
                 <div>
                   <p className="font-bold text-gray-900">{order.customerName}</p>
@@ -147,7 +261,7 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            {orders.map((order) => {
+            {filteredOrders.map((order) => {
               const paymentMeta = getPaymentStatusMeta(order.paymentStatus);
 
               return (
