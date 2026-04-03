@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { Package, Calendar } from 'lucide-react';
+import { Package, Calendar, CalendarRange, IndianRupee, Filter } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
 import { cn, formatCurrency, getPaymentStatusMeta, getProductLabel } from '../lib/utils';
@@ -10,6 +10,11 @@ export default function OrderHistory() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submittingPaymentId, setSubmittingPaymentId] = useState(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -44,22 +49,101 @@ export default function OrderHistory() {
     }
   };
 
+  const filteredOrders = orders.filter((order) => {
+    const matchesSelectedDate = !selectedDate || order.deliveryDate === selectedDate;
+    const matchesDateFrom = !dateFrom || order.deliveryDate >= dateFrom;
+    const matchesDateTo = !dateTo || order.deliveryDate <= dateTo;
+    const matchesMinPrice = minPrice === '' || order.totalAmount >= parseFloat(minPrice);
+    const matchesMaxPrice = maxPrice === '' || order.totalAmount <= parseFloat(maxPrice);
+
+    return matchesSelectedDate && matchesDateFrom && matchesDateTo && matchesMinPrice && matchesMaxPrice;
+  });
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
+
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+        <div className="flex items-center gap-2">
+          <Filter size={18} className="text-orange-600" />
+          <h3 className="font-bold text-gray-900">Filters</h3>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <Calendar size={12} /> Exact Date
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <CalendarRange size={12} /> Date From
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <CalendarRange size={12} /> Date To
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <IndianRupee size={12} /> Min Price
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="0"
+            />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+              <IndianRupee size={12} /> Max Price
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </div>
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-gray-200 animate-pulse rounded-2xl"></div>)}
         </div>
-      ) : orders.length === 0 ? (
+      ) : filteredOrders.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
           <Package className="mx-auto text-gray-300 mb-2" size={48} />
-          <p className="text-gray-500 font-medium">No past orders</p>
+          <p className="text-gray-500 font-medium">No orders match these filters</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => {
+          {filteredOrders.map((order) => {
             const paymentMeta = getPaymentStatusMeta(order.paymentStatus);
 
             return (
