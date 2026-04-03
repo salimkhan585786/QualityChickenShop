@@ -67,10 +67,6 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Admin Panel</h2>
-        <div className="text-right">
-          <p className="text-xs text-gray-500 uppercase font-bold">Breast Boneless</p>
-          <p className="text-lg font-bold text-orange-600">{formatCurrency(productRates['breast-boneless'] || 0)}/kg</p>
-        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

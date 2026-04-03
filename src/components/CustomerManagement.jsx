@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { Users, Phone, MapPin, Save } from 'lucide-react';
+import { Users, Phone, MapPin, Save,ChevronDown, ChevronUp } from 'lucide-react';
 import { db } from '../firebase';
 import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductRates } from '../lib/utils';
 
@@ -10,6 +10,7 @@ export default function CustomerManagement() {
   const [editingId, setEditingId] = useState(null);
   const [draftRates, setDraftRates] = useState({});
   const [loading, setLoading] = useState(false);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, 'users'), where('role', '==', 'business'));
@@ -26,7 +27,9 @@ export default function CustomerManagement() {
       unsubscribeSettings();
     };
   }, []);
-
+ const toggleAccordion = (uid) => {
+  setOpenCustomerId((prev) => (prev === uid ? null : uid));
+};
   const startEditing = (customer) => {
     setEditingId(customer.uid);
     setDraftRates(getBusinessProductRates(settings, customer));
@@ -75,13 +78,30 @@ export default function CustomerManagement() {
           const effectiveRates = getBusinessProductRates(settings, customer);
 
           return (
-            <div key={customer.uid} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+           <div
+  key={customer.uid}
+  className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 cursor-pointer"
+  onClick={() => toggleAccordion(customer.uid)}
+>
               <div className="flex gap-3">
                 <div className="bg-orange-100 w-12 h-12 rounded-2xl flex items-center justify-center text-orange-600">
                   <Users size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">{customer.businessName}</h3>
+                 <h3 className="font-bold text-gray-900 flex items-center justify-between">
+  {customer.businessName}
+  {openCustomerId === customer.uid ? (
+    <ChevronUp size={16} className="text-gray-500 ml-2" />
+  ) : (
+    <ChevronDown
+  size={16}
+  className={`text-gray-500 transition-transform duration-200 ml-2 ${
+    openCustomerId === customer.uid ? 'rotate-180' : ''
+  }`}
+/>
+  )}
+</h3>
+                   
                   <p className="text-xs text-gray-500 flex items-center gap-1"><Phone size={10} /> {customer.contact}</p>
                 </div>
               </div>
@@ -91,7 +111,11 @@ export default function CustomerManagement() {
                 <span className="line-clamp-1">{customer.address}</span>
               </div>
 
-              <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+           {openCustomerId === customer.uid && (
+  <div
+    className="bg-gray-50 rounded-2xl p-4 space-y-2 mt-4"
+    onClick={(e) => e.stopPropagation()} // 🔥 IMPORTANT (prevents closing when clicking inside)
+  >
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-gray-900">Business Rates</p>
                   {editingId === customer.uid ? (
@@ -141,6 +165,7 @@ export default function CustomerManagement() {
                   </p>
                 )}
               </div>
+        )}
             </div>
           );
         })}

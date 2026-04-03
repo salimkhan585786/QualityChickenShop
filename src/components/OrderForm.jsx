@@ -94,10 +94,6 @@ export default function OrderForm() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">New Order</h2>
-        <div className="text-right">
-          <p className="text-xs text-gray-500 uppercase font-bold">Rate Type</p>
-          <p className="text-lg font-bold text-orange-600">{hasCustomProductRates(profile) ? 'Custom / Global' : 'Global Daily'}</p>
-        </div>
       </div>
 
       <div className="space-y-3">

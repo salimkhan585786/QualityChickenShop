@@ -29,6 +29,7 @@ import BusinessDashboard from './components/BusinessDashboard';
 import DeliveryDashboard from './components/DeliveryDashboard';
 import OrderForm from './components/OrderForm';
 import OrderHistory from './components/OrderHistory';
+import Payments from './components/Payments';
 import CustomerManagement from './components/CustomerManagement';
 import PricingControl from './components/PricingControl';
 import DeliveryManagement from './components/DeliveryManagement';
@@ -39,7 +40,6 @@ const Layout = ({ children, role }) => {
   const navItems = {
     admin: [
       { path: '/admin', icon: Home, label: 'Dashboard' },
-      { path: '/admin/orders', icon: Package, label: 'Orders' },
       { path: '/admin/customers', icon: Users, label: 'Customers' },
       { path: '/admin/pricing', icon: Settings, label: 'Pricing' },
       { path: '/admin/delivery', icon: Truck, label: 'Delivery' },
@@ -170,7 +170,6 @@ function AdminRoutes() {
   return (
     <Routes>
       <Route path="/" element={<AdminDashboard />} />
-      <Route path="/orders" element={<AdminDashboard />} />
       <Route path="/customers" element={<CustomerManagement />} />
       <Route path="/pricing" element={<PricingControl />} />
       <Route path="/delivery" element={<DeliveryManagement />} />
@@ -184,7 +183,7 @@ function BusinessRoutes() {
       <Route path="/" element={<BusinessDashboard />} />
       <Route path="/order" element={<OrderForm />} />
       <Route path="/history" element={<OrderHistory />} />
-      <Route path="/payments" element={<div className="p-4 bg-white rounded-xl shadow-sm">Payments coming soon</div>} />
+      <Route path="/payments" element={<Payments />} />
     </Routes>
   );
 }

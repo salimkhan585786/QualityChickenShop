@@ -36,6 +36,7 @@ export default function OrderHistory() {
         paymentStatus: 'payment-submitted',
         paymentSubmittedAt: serverTimestamp(),
       });
+      console.log("Payment status updated to 'payment-submitted' for order:", orderId);
     } catch (err) {
       console.error(err);
     } finally {
