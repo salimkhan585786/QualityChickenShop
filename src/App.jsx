@@ -8,9 +8,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { LogOut, ShoppingCart, Package, Users, Settings, Truck, Home, History, CreditCard } from 'lucide-react';
+import { LogOut, ShoppingCart, Users, Settings, Truck, Home, History, CreditCard, Repeat, Languages } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { handleFirestoreError, OperationType } from './lib/utils';
+import { useI18n } from './lib/i18n';
 import logo from './image/logo.png';
 
 // Contexts
@@ -30,29 +31,36 @@ import BusinessDashboard from './components/BusinessDashboard';
 import DeliveryDashboard from './components/DeliveryDashboard';
 import OrderForm from './components/OrderForm';
 import OrderHistory from './components/OrderHistory';
+import OrderDetails from './components/OrderDetails';
 import Payments from './components/Payments';
+import Subscriptions from './components/Subscriptions';
 import CustomerManagement from './components/CustomerManagement';
 import PricingControl from './components/PricingControl';
 import DeliveryManagement from './components/DeliveryManagement';
+import LanguageModal from './components/LanguageModal';
+import SubscriptionSync from './components/SubscriptionSync';
 
 const Layout = ({ children, role }) => {
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   const navItems = {
     admin: [
-      { path: '/admin', icon: Home, label: 'Dashboard' },
-      { path: '/admin/customers', icon: Users, label: 'Customers' },
-      { path: '/admin/pricing', icon: Settings, label: 'Pricing' },
-      { path: '/admin/delivery', icon: Truck, label: 'Delivery' },
+      { path: '/admin', icon: Home, label: t('nav.dashboard', 'Dashboard') },
+      { path: '/admin/customers', icon: Users, label: t('nav.customers', 'Customers') },
+      { path: '/admin/pricing', icon: Settings, label: t('nav.pricing', 'Pricing') },
+      { path: '/admin/delivery', icon: Truck, label: t('nav.delivery', 'Delivery') },
     ],
     business: [
-      { path: '/business', icon: Home, label: 'Dashboard' },
-      { path: '/business/order', icon: ShoppingCart, label: 'New Order' },
-      { path: '/business/history', icon: History, label: 'History' },
-      { path: '/business/payments', icon: CreditCard, label: 'Payments' },
+      { path: '/business', icon: Home, label: t('nav.dashboard', 'Dashboard') },
+      { path: '/business/order', icon: ShoppingCart, label: t('nav.newOrder', 'New Order') },
+      { path: '/business/history', icon: History, label: t('nav.history', 'History') },
+      { path: '/business/payments', icon: CreditCard, label: t('nav.payments', 'Payments') },
+      { path: '/business/subscriptions', icon: Repeat, label: t('nav.subscriptions', 'Subscriptions') },
     ],
     delivery: [
-      { path: '/delivery', icon: Home, label: 'Dashboard' },
+      { path: '/delivery', icon: Home, label: t('nav.dashboard', 'Dashboard') },
     ],
   };
 
@@ -60,12 +68,21 @@ const Layout = ({ children, role }) => {
     <div className="min-h-screen bg-gray-50 pb-20">
       <header className="bg-white border-b top-0 z-99 px-4 py-1 flex justify-between items-center">
         <img src={logo} alt="Quality Chicken Shop" className="h-20 w-auto object-contain " />
-        <button 
-          onClick={() => signOut(auth)}
-          className="p-2 text-gray-500 hover:text-red-500 transition-colors"
-        >
-          <LogOut size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowLanguageModal(true)}
+            className="p-2 text-gray-500 hover:text-orange-600 transition-colors"
+          >
+            <Languages size={20} />
+          </button>
+          <button 
+            onClick={() => signOut(auth)}
+            className="p-2 text-gray-500 hover:text-red-500 transition-colors"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
       </header>
 
       <main className="p-4 max-w-md mx-auto">
@@ -96,6 +113,8 @@ const Layout = ({ children, role }) => {
           </button>
         ))}
       </nav>
+
+      <LanguageModal open={showLanguageModal} onClose={() => setShowLanguageModal(false)} />
     </div>
   );
 };
@@ -146,6 +165,7 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ user, profile, loading }}>
+      <SubscriptionSync user={user} profile={profile} />
       <Router>
         <Routes>
           <Route path="/login" element={user && profile ? <Navigate to="/" /> : <Login />} />
@@ -171,6 +191,7 @@ function AdminRoutes() {
   return (
     <Routes>
       <Route path="/" element={<AdminDashboard />} />
+      <Route path="/orders/:orderId" element={<OrderDetails />} />
       <Route path="/customers" element={<CustomerManagement />} />
       <Route path="/pricing" element={<PricingControl />} />
       <Route path="/delivery" element={<DeliveryManagement />} />
@@ -183,8 +204,11 @@ function BusinessRoutes() {
     <Routes>
       <Route path="/" element={<BusinessDashboard />} />
       <Route path="/order" element={<OrderForm />} />
+      <Route path="/order/:orderId" element={<OrderForm />} />
+      <Route path="/orders/:orderId" element={<OrderDetails />} />
       <Route path="/history" element={<OrderHistory />} />
       <Route path="/payments" element={<Payments />} />
+      <Route path="/subscriptions" element={<Subscriptions />} />
     </Routes>
   );
 }
@@ -193,6 +217,7 @@ function DeliveryRoutes() {
   return (
     <Routes>
       <Route path="/" element={<DeliveryDashboard />} />
+      <Route path="/orders/:orderId" element={<OrderDetails />} />
     </Routes>
   );
 }

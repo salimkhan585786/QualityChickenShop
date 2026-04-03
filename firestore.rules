@@ -99,23 +99,49 @@ service cloud.firestore {
         request.resource.data.paymentStatus == 'payment-submitted';
     }
 
+    function isBusinessOrderEdit() {
+      return isBusinessUser() &&
+        resource.data.customerId == request.auth.uid &&
+        resource.data.status in ['placed', 'confirmed'] &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.customerId == resource.data.customerId &&
+        request.resource.data.paymentStatus == resource.data.paymentStatus &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'items',
+          'totalAmount',
+          'deliveryDate',
+          'timeSlot',
+          'notes',
+          'customerName',
+          'customerAddress',
+          'customerPhone'
+        ]);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
 
     match /users/{uid} {
-      allow read: if isAuthenticated() && (isOwner(uid) || isAdmin());
+      allow read: if isAuthenticated() && (
+        isOwner(uid) ||
+        isAdmin() ||
+        (isBusinessUser() && resource.data.role == 'delivery')
+      );
       allow create: if isAuthenticated() && isOwner(uid) && isValidUser(request.resource.data);
       allow update: if isAuthenticated() && (isAdmin() || (isOwner(uid) && request.resource.data.role == resource.data.role));
     }
 
     match /orders/{orderId} {
       allow read: if isAuthenticated() && (isAdmin() || isDeliveryBoy() || (isBusinessUser() && resource.data.customerId == request.auth.uid));
-      allow create: if isAuthenticated() && isBusinessUser() && request.resource.data.customerId == request.auth.uid && isValidOrder(request.resource.data);
+      allow create: if isAuthenticated() && (
+        (isBusinessUser() && request.resource.data.customerId == request.auth.uid && isValidOrder(request.resource.data)) ||
+        (isAdmin() && isValidOrder(request.resource.data))
+      );
       allow update: if isAuthenticated() && (
         isAdmin() || 
         (isDeliveryBoy() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
-        (isBusinessUser() && resource.data.customerId == request.auth.uid && resource.data.status == 'placed') ||
+        isBusinessOrderEdit() ||
         isBusinessPaymentSubmission()
       );
     }

@@ -45,18 +45,42 @@ export default function Register() {
       });
 
       navigate('/');
-    } catch (err) {
-      console.error(err);
-      if (err?.code?.startsWith('auth/')) {
-        setError('Registration failed. Please use a valid email and a stronger password.');
-      } else {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          handleFirestoreError(err, OperationType.WRITE, `users/${currentUser.uid}`, auth);
-        }
-        setError('We could not complete registration. Please try again.');
+    }catch (err) {
+  console.error(err);
+
+  switch (err.code) {
+    case 'auth/email-already-in-use':
+      setError('This email is already registered. Please login instead.');
+      break;
+
+    case 'auth/invalid-email':
+      setError('Invalid email format.');
+      break;
+
+    case 'auth/weak-password':
+      setError('Password should be at least 6 characters.');
+      break;
+
+    case 'auth/network-request-failed':
+      setError('Network error. Check your internet connection.');
+      break;
+
+    default: {
+      const currentUser = auth.currentUser;
+
+      if (currentUser) {
+        handleFirestoreError(
+          err,
+          OperationType.WRITE,
+          `users/${currentUser.uid}`,
+          auth
+        );
       }
-    } finally {
+
+      setError('We could not complete registration. Please try again.');
+    }
+  }
+} finally {
       setLoading(false);
     }
   };

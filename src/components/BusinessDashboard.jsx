@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Package, Clock, CreditCard, ChevronRight, ShoppingCart, Filter, Calendar, CalendarRange, IndianRupee } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
-import { cn, formatCurrency, getBusinessProductRates, getPaymentStatusMeta, getProductLabel, hasCustomProductRates, PRODUCT_DEFINITIONS } from '../lib/utils';
+import { cn, formatCurrency, formatOrderItems, getBusinessProductRates, getOrderDetailsPath, getPaymentStatusMeta, hasCustomProductRates, PRODUCT_DEFINITIONS } from '../lib/utils';
 
 export default function BusinessDashboard() {
   const { user, profile } = useAuth();
@@ -210,20 +210,24 @@ export default function BusinessDashboard() {
               const paymentMeta = getPaymentStatusMeta(order.paymentStatus);
 
               return (
-                <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
+                <Link
+                  key={order.id}
+                  to={getOrderDetailsPath(profile?.role, order.id)}
+                  className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center gap-4 transition-colors hover:border-orange-200"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className={cn(
-                      'w-10 h-10 rounded-xl flex items-center justify-center',
+                      'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
                       order.status === 'delivered' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
                     )}>
                       <Package size={20} />
                     </div>
-                    <div>
-                      <p className="font-bold text-gray-900">{getProductLabel(order.items?.[0]?.type)}{order.items?.length > 1 ? '...' : ''}</p>
+                    <div className="min-w-0">
+                      <p className="font-bold text-gray-900 break-words">{formatOrderItems(order.items)}</p>
                       <p className="text-xs text-gray-500">{order.deliveryDate} • {order.timeSlot}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <p className="font-bold text-gray-900">{formatCurrency(order.totalAmount)}</p>
                     <p className={cn(
                       'text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block',
@@ -238,7 +242,7 @@ export default function BusinessDashboard() {
                       {paymentMeta.label}
                     </p>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
