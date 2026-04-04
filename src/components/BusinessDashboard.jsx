@@ -65,17 +65,21 @@ export default function BusinessDashboard() {
         <div className="relative z-10">
           <p className="text-orange-100 text-sm font-medium">Welcome back,</p>
           <h2 className="text-2xl font-bold">{profile?.businessName}</h2>
-          <div className="mt-4 flex justify-between items-end gap-4">
-            <div>
-              <p className="text-orange-100 text-xs uppercase tracking-wider">{rateSourceLabel}</p>
-              <p className="text-lg font-bold">{PRODUCT_DEFINITIONS.length} products by kg</p>
-              <p className="text-orange-100 text-xs mt-1">
-                Breast Boneless: {formatCurrency(productRates['breast-boneless'] || 0)}/kg
-              </p>
-            </div>
+          <div className="mt-4 flex flex-col gap-4">
+        <div className=''>
+  <p className="text-orange-100 text-xs uppercase tracking-wider">Trusted Supply</p>
+  
+  <p className="text-lg font-bold">
+    Fresh. Reliable. Always On Time.
+  </p>
+
+  <p className="text-orange-100 text-xs mt-1">
+    Delivering premium quality chicken you can भरोसा on, every single day.
+  </p>
+</div>
             <Link
               to="/business/order"
-              className="bg-white text-orange-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-sm active:scale-95 transition-transform"
+              className="bg-white text-orange-600 px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
             >
               <ShoppingCart size={18} />
               Order Now
@@ -85,7 +89,7 @@ export default function BusinessDashboard() {
         <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-orange-500 rounded-full opacity-20 blur-3xl"></div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+      {/* <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
         <h3 className="font-bold text-gray-900 mb-3">Current Rates</h3>
         <div className="grid grid-cols-2 gap-3">
           {PRODUCT_DEFINITIONS.map((product) => (
@@ -95,7 +99,7 @@ export default function BusinessDashboard() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">

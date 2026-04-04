@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Minus, Trash2, Calendar, Clock, ArrowRight } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
-import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductLabel } from '../lib/utils';
+import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductImages, getProductLabel } from '../lib/utils';
 
 export default function OrderForm() {
   const { user, profile } = useAuth();
@@ -72,6 +72,7 @@ export default function OrderForm() {
   }, [db, isEditMode, navigate, orderId, user]);
 
   const productRates = getBusinessProductRates(settings, profile);
+  const productImages = getProductImages(settings);
 
   const toggleItem = (type) => {
     setItems((current) => {
@@ -180,14 +181,18 @@ export default function OrderForm() {
                 key={product.id}
                 type="button"
                 onClick={() => toggleItem(product.id)}
-                className={`p-3 rounded-2xl text-sm font-medium transition-all text-center border ${
+                className={`relative overflow-hidden min-h-32 p-3 rounded-2xl text-sm font-medium transition-all text-left border ${
                   isSelected
-                    ? 'bg-orange-50 border-orange-500 text-orange-700 shadow-sm'
-                    : 'bg-white border-gray-200 hover:border-orange-500 active:bg-orange-50'
+                    ? 'border-orange-500 text-white shadow-sm'
+                    : 'border-gray-200 text-white hover:border-orange-500'
                 }`}
+                style={productImages[product.id] ? { backgroundImage: `url(${productImages[product.id]})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
               >
-                <p className="font-bold">{product.name}</p>
-                <p className="text-xs mt-1">{formatCurrency(productRates[product.id] || 0)}/kg</p>
+                <div className={`absolute inset-0 ${productImages[product.id] ? (isSelected ? 'bg-black/35' : 'bg-black/50') : (isSelected ? 'bg-orange-500' : 'bg-gray-700')}`} />
+                <div className="relative z-10 flex min-h-[104px] flex-col justify-end">
+                  <p className="font-bold">{product.name}</p>
+                  <p className="text-xs mt-1">{formatCurrency(productRates[product.id] || 0)}/kg</p>
+                </div>
               </button>
             );
           })}
