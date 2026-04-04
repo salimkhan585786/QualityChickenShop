@@ -5,8 +5,10 @@ import { Plus, Minus, Trash2, Calendar, Clock, ArrowRight } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../App';
 import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductImages, getProductLabel } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 
 export default function OrderForm() {
+  const { t } = useI18n();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { orderId } = useParams();
@@ -151,7 +153,7 @@ export default function OrderForm() {
   if (initializing) {
     return (
       <div className="bg-white p-6 rounded-2xl border border-gray-100 text-sm text-gray-500">
-        Loading order...
+        {t('orderForm.loadingOrder', 'Loading order...')}
       </div>
     );
   }
@@ -159,7 +161,7 @@ export default function OrderForm() {
   if (editLocked) {
     return (
       <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-300 text-sm text-gray-500">
-        This order can no longer be edited because it has already been packed or moved ahead.
+        {t('orderForm.editLocked', 'This order can no longer be edited because it has already been packed or moved ahead.')}
       </div>
     );
   }
@@ -167,11 +169,11 @@ export default function OrderForm() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Edit Order' : 'New Order'}</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{isEditMode ? t('orderForm.editOrder', 'Edit Order') : t('orderForm.newOrder', 'New Order')}</h2>
       </div>
 
       <div className="space-y-3">
-        <p className="text-sm font-bold text-gray-700">Select Product</p>
+        <p className="text-sm font-bold text-gray-700">{t('orderForm.selectProduct', 'Select Product')}</p>
         <div className="grid grid-cols-2 gap-2">
           {PRODUCT_DEFINITIONS.map((product) => {
             const isSelected = items.some((item) => item.type === product.id);
@@ -201,7 +203,7 @@ export default function OrderForm() {
 
       {items.length > 0 && (
         <div className="space-y-3">
-          <p className="text-sm font-bold text-gray-700">Your Cart</p>
+          <p className="text-sm font-bold text-gray-700">{t('orderForm.yourCart', 'Your Cart')}</p>
           <div className="space-y-2">
             {items.map((item, index) => (
               <div key={item.type} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
@@ -235,7 +237,7 @@ export default function OrderForm() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <Calendar size={12} /> Date
+              <Calendar size={12} /> {t('orderForm.date', 'Date')}
             </label>
             <input
               type="date"
@@ -247,7 +249,7 @@ export default function OrderForm() {
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <Clock size={12} /> Slot
+              <Clock size={12} /> {t('orderForm.slot', 'Slot')}
             </label>
             <select
               className="w-full bg-white border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
@@ -263,9 +265,9 @@ export default function OrderForm() {
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-bold text-gray-500 uppercase">Special Instructions</label>
+          <label className="text-xs font-bold text-gray-500 uppercase">{t('orderForm.specialInstructions', 'Special Instructions')}</label>
           <textarea
-            placeholder="e.g. Extra small pieces, skinless..."
+            placeholder={t('orderForm.notesPlaceholder', 'e.g. Extra small pieces, skinless...')}
             className="w-full bg-white border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
             rows={2}
             value={notes}
@@ -274,7 +276,7 @@ export default function OrderForm() {
         </div>
 
         <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 flex justify-between items-center">
-          <p className="font-bold text-orange-900">Total Amount</p>
+          <p className="font-bold text-orange-900">{t('orderForm.totalAmount', 'Total Amount')}</p>
           <p className="text-2xl font-black text-orange-600">{formatCurrency(totalAmount)}</p>
         </div>
 
@@ -283,7 +285,7 @@ export default function OrderForm() {
           disabled={loading || items.length === 0}
           className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform disabled:opacity-50"
         >
-          {loading ? (isEditMode ? 'Updating Order...' : 'Placing Order...') : (isEditMode ? 'Update Order' : 'Place Order Now')}
+          {loading ? (isEditMode ? t('orderForm.updating', 'Updating Order...') : t('orderForm.placing', 'Placing Order...')) : (isEditMode ? t('orderForm.updateOrder', 'Update Order') : t('orderForm.placeOrder', 'Place Order Now'))}
           <ArrowRight size={20} />
         </button>
       </form>

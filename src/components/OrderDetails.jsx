@@ -5,8 +5,10 @@ import { ArrowLeft, Calendar, Clock, CreditCard, MapPin, NotebookPen, Package, P
 import { db } from '../firebase';
 import { useAuth } from '../App';
 import { cn, formatCurrency, getPaymentStatusMeta, getProductLabel } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 
 export default function OrderDetails() {
+  const { t } = useI18n();
   const { user, profile } = useAuth();
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -32,7 +34,7 @@ export default function OrderDetails() {
     const unsubscribe = onSnapshot(doc(db, 'orders', orderId), (orderSnap) => {
       if (!orderSnap.exists()) {
         setOrder(null);
-        setDeliveryStaffName('Unassigned');
+        setDeliveryStaffName(t('common.unassigned', 'Unassigned'));
         setLoading(false);
         return;
       }
@@ -53,17 +55,17 @@ export default function OrderDetails() {
 
   useEffect(() => {
     if (!order?.deliveryBoyId) {
-      setDeliveryStaffName('Unassigned');
+      setDeliveryStaffName(t('common.unassigned', 'Unassigned'));
       return;
     }
 
-    setDeliveryStaffName(order.deliveryBoyName || 'Assigned');
+    setDeliveryStaffName(order.deliveryBoyName || t('common.assigned', 'Assigned'));
 
     const unsubscribe = onSnapshot(
       doc(db, 'users', order.deliveryBoyId),
       (userSnap) => {
         if (!userSnap.exists()) {
-          setDeliveryStaffName(order.deliveryBoyName || 'Assigned');
+          setDeliveryStaffName(order.deliveryBoyName || t('common.assigned', 'Assigned'));
           return;
         }
 
@@ -75,21 +77,21 @@ export default function OrderDetails() {
           deliveryProfile?.businessName ||
           deliveryProfile?.email ||
           order.deliveryBoyName ||
-          'Assigned'
+          t('common.assigned', 'Assigned')
         );
       },
       () => {
-        setDeliveryStaffName(order.deliveryBoyName || 'Assigned');
+        setDeliveryStaffName(order.deliveryBoyName || t('common.assigned', 'Assigned'));
       }
     );
 
     return () => unsubscribe();
-  }, [order?.deliveryBoyId, order?.deliveryBoyName]);
+  }, [order?.deliveryBoyId, order?.deliveryBoyName, t]);
 
   if (loading) {
     return (
       <div className="bg-white p-6 rounded-2xl border border-gray-100 text-sm text-gray-500">
-        Loading order details...
+        {t('orderDetails.loading', 'Loading order details...')}
       </div>
     );
   }
@@ -97,7 +99,7 @@ export default function OrderDetails() {
   if (accessDenied) {
     return (
       <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-300 text-sm text-gray-500">
-        You do not have access to view this order.
+        {t('orderDetails.noAccess', 'You do not have access to view this order.')}
       </div>
     );
   }
@@ -105,7 +107,7 @@ export default function OrderDetails() {
   if (!order) {
     return (
       <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-300 text-sm text-gray-500">
-        Order not found.
+        {t('orderDetails.notFound', 'Order not found.')}
       </div>
     );
   }
@@ -132,8 +134,8 @@ export default function OrderDetails() {
       <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-5">
         <div className="flex justify-between items-start gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{order.customerName || 'Order Details'}</h2>
-            <p className="text-xs text-gray-500 mt-1">Order ID: {order.id}</p>
+            <h2 className="text-2xl font-bold text-gray-900">{order.customerName || t('orderDetails.title', 'Order Details')}</h2>
+            <p className="text-xs text-gray-500 mt-1">{t('common.orderId', 'Order ID')}: {order.id}</p>
           </div>
           <div className="text-right">
             <p className="text-2xl font-black text-orange-600">{formatCurrency(order.totalAmount || 0)}</p>
@@ -155,25 +157,25 @@ export default function OrderDetails() {
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-50 rounded-2xl p-3">
             <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <Calendar size={12} /> Delivery Date
+              <Calendar size={12} /> {t('orderDetails.deliveryDate', 'Delivery Date')}
             </p>
-            <p className="text-sm font-bold text-gray-900 mt-1">{order.deliveryDate || 'Not set'}</p>
+            <p className="text-sm font-bold text-gray-900 mt-1">{order.deliveryDate || t('common.notSet', 'Not set')}</p>
           </div>
           <div className="bg-gray-50 rounded-2xl p-3">
             <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <Clock size={12} /> Time Slot
+              <Clock size={12} /> {t('orderDetails.timeSlot', 'Time Slot')}
             </p>
-            <p className="text-sm font-bold text-gray-900 mt-1">{order.timeSlot || 'Not set'}</p>
+            <p className="text-sm font-bold text-gray-900 mt-1">{order.timeSlot || t('common.notSet', 'Not set')}</p>
           </div>
           <div className="bg-gray-50 rounded-2xl p-3">
             <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <User size={12} /> Customer
+              <User size={12} /> {t('orderDetails.customer', 'Customer')}
             </p>
-            <p className="text-sm font-bold text-gray-900 mt-1">{order.customerName || 'Unknown'}</p>
+            <p className="text-sm font-bold text-gray-900 mt-1">{order.customerName || t('orderDetails.customer', 'Customer')}</p>
           </div>
           <div className="bg-gray-50 rounded-2xl p-3">
             <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              <Truck size={12} /> Delivery Staff
+              <Truck size={12} /> {t('orderDetails.deliveryStaff', 'Delivery Staff')}
             </p>
             <p className="text-sm font-bold text-gray-900 mt-1">{deliveryStaffName}</p>
           </div>
@@ -182,7 +184,7 @@ export default function OrderDetails() {
         <div className="space-y-3">
           <h3 className="font-bold text-gray-900 flex items-center gap-2">
             <Package size={18} className="text-orange-600" />
-            Products
+            {t('orderDetails.products', 'Products')}
           </h3>
           <div className="space-y-2">
             {(order.items || []).map((item) => (
@@ -210,17 +212,17 @@ export default function OrderDetails() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">
             <MapPin size={16} className="text-orange-500 flex-shrink-0" />
-            <span>{order.customerAddress || 'Address not available'}</span>
+            <span>{order.customerAddress || t('common.addressNotAvailable', 'Address not available')}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">
             <NotebookPen size={16} className="text-orange-500 flex-shrink-0" />
-            <span>{order.notes || 'No special instructions'}</span>
+            <span>{order.notes || t('common.noSpecialInstructions', 'No special instructions')}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">
             <Phone size={16} className="text-orange-500 flex-shrink-0" />
-            <span>{order.customerPhone || 'Phone not available'}</span>
+            <span>{order.customerPhone || t('common.phoneNotAvailable', 'Phone not available')}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">

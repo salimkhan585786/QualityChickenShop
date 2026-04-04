@@ -3,8 +3,10 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { auth } from '../firebase';
+import { useI18n } from '../lib/i18n';
 
 export default function Login() {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +23,7 @@ export default function Login() {
       navigate('/');
     } catch (err) {
       console.error(err);
-      setError('Login failed. Please check your email and password.');
+      setError(t('auth.loginFailed', 'Login failed. Please check your email and password.'));
     } finally {
       setLoading(false);
     }
@@ -38,20 +40,20 @@ export default function Login() {
             Quality Chicken Shop
           </h2>
           <p className="mt-2 text-sm text-gray-500 font-medium">
-            Login with your email and password
+            {t('login.title', 'Login with your email and password')}
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700 ml-1">Email Address</label>
+            <label className="text-sm font-bold text-gray-700 ml-1">{t('login.emailLabel', 'Email Address')}</label>
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="email"
                 required
                 className="w-full bg-gray-50 border border-gray-200 pl-12 pr-4 py-4 rounded-2xl text-base font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                placeholder="Enter your email"
+                placeholder={t('login.emailPlaceholder', 'Enter your email')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -59,14 +61,14 @@ export default function Login() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700 ml-1">Password</label>
+            <label className="text-sm font-bold text-gray-700 ml-1">{t('login.passwordLabel', 'Password')}</label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="password"
                 required
                 className="w-full bg-gray-50 border border-gray-200 pl-12 pr-4 py-4 rounded-2xl text-base font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                placeholder="Enter your password"
+                placeholder={t('login.passwordPlaceholder', 'Enter your password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -80,19 +82,19 @@ export default function Login() {
             disabled={loading || !email.trim() || !password}
             className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-200 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
           >
-            {loading ? 'Signing in...' : 'Login'}
+            {loading ? t('auth.loggingIn', 'Signing in...') : t('login.button', 'Login')}
             <ArrowRight size={20} />
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500">
-          Need an account?{' '}
+          {t('auth.needAccount', 'Need an account?')}{' '}
           <Link to="/register" className="font-bold text-orange-600 hover:text-orange-700">
-            Register here
+            {t('login.registerHere', 'Register here')}
           </Link>
         </p>
         <p className="text-center text-xs text-gray-400 px-4">
-          Admin users can sign in here with credentials created in Firebase.
+          {t('auth.adminHint', 'Admin users can sign in here with credentials created in Firebase.')}
         </p>
       </div>
     </div>

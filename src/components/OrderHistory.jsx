@@ -5,8 +5,10 @@ import { db } from '../firebase';
 import { useAuth } from '../App';
 import { Link } from 'react-router-dom';
 import { cn, formatCurrency, formatOrderItems, getOrderDetailsPath, getPaymentStatusMeta } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 
 export default function OrderHistory() {
+  const { t } = useI18n();
   const { user, profile } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function OrderHistory() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{t('history.title', 'Order History')}</h2>
         <button
           type="button"
           onClick={() => setShowFilters((current) => !current)}
@@ -77,13 +79,13 @@ export default function OrderHistory() {
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-center gap-2">
             <Filter size={18} className="text-orange-600" />
-            <h3 className="font-bold text-gray-900">Filters</h3>
+            <h3 className="font-bold text-gray-900">{t('common.filters', 'Filters')}</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <Calendar size={12} /> Exact Date
+                <Calendar size={12} /> {t('common.exactDate', 'Exact Date')}
               </label>
               <input
                 type="date"
@@ -94,7 +96,7 @@ export default function OrderHistory() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <CalendarRange size={12} /> Date From
+                <CalendarRange size={12} /> {t('common.dateFrom', 'Date From')}
               </label>
               <input
                 type="date"
@@ -105,7 +107,7 @@ export default function OrderHistory() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <CalendarRange size={12} /> Date To
+                <CalendarRange size={12} /> {t('common.dateTo', 'Date To')}
               </label>
               <input
                 type="date"
@@ -116,7 +118,7 @@ export default function OrderHistory() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <IndianRupee size={12} /> Min Price
+                <IndianRupee size={12} /> {t('common.minPrice', 'Min Price')}
               </label>
               <input
                 type="number"
@@ -129,7 +131,7 @@ export default function OrderHistory() {
             </div>
             <div className="space-y-1 sm:col-span-2">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <IndianRupee size={12} /> Max Price
+                <IndianRupee size={12} /> {t('common.maxPrice', 'Max Price')}
               </label>
               <input
                 type="number"
@@ -151,7 +153,7 @@ export default function OrderHistory() {
       ) : filteredOrders.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
           <Package className="mx-auto text-gray-300 mb-2" size={48} />
-          <p className="text-gray-500 font-medium">No orders match these filters</p>
+          <p className="text-gray-500 font-medium">{t('history.noOrders', 'No orders match these filters')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -199,10 +201,10 @@ export default function OrderHistory() {
                     className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
                   >
                     {order.paymentStatus === 'payment-submitted'
-                      ? 'Payment Waiting for Admin Confirmation'
+                      ? t('history.paymentWaiting', 'Payment Waiting for Admin Confirmation')
                       : submittingPaymentId === order.id
-                        ? 'Updating...'
-                        : 'I Have Paid'}
+                        ? t('history.updating', 'Updating...')
+                        : t('history.iHavePaid', 'I Have Paid')}
                   </button>
                 )}
 
@@ -211,7 +213,7 @@ export default function OrderHistory() {
                     to={`/business/order/${order.id}`}
                     className="block w-full bg-orange-100 text-orange-700 py-2.5 rounded-xl text-sm font-bold text-center"
                   >
-                    Edit Order
+                    {t('history.editOrder', 'Edit Order')}
                   </Link>
                 )}
               </div>

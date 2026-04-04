@@ -3,6 +3,7 @@ import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ImagePlus, Save, TrendingUp } from 'lucide-react';
 import { db } from '../firebase';
 import { PRODUCT_DEFINITIONS, formatCurrency, getProductImages, getProductRates } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -14,6 +15,7 @@ function readFileAsDataUrl(file) {
 }
 
 export default function PricingControl() {
+  const { t } = useI18n();
   const [settings, setSettings] = useState(null);
   const [productRates, setProductRates] = useState({});
   const [productImages, setProductImages] = useState({});
@@ -63,7 +65,7 @@ export default function PricingControl() {
         productImages,
         updatedAt: serverTimestamp(),
       }, { merge: true });
-      alert('Daily product rates and images updated successfully!');
+      alert(t('pricing.updatedSuccess', 'Daily product rates and images updated successfully!'));
     } catch (err) {
       console.error(err);
       alert(`Error updating rates: ${err.message}`);
@@ -74,10 +76,10 @@ export default function PricingControl() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Pricing Control</h2>
+      <h2 className="text-2xl font-bold text-gray-900">{t('pricing.title', 'Pricing Control')}</h2>
 
       <div className="bg-orange-600 p-6 rounded-3xl text-white shadow-lg">
-        <p className="text-orange-100 text-sm font-medium">Global Daily Rates</p>
+        <p className="text-orange-100 text-sm font-medium">{t('pricing.globalRates', 'Global Daily Rates')}</p>
         <div className="mt-3 space-y-2">
           {PRODUCT_DEFINITIONS.map((product) => (
             <div key={product.id} className="flex items-center justify-between text-sm">
@@ -87,7 +89,7 @@ export default function PricingControl() {
           ))}
         </div>
         <p className="text-orange-100 text-xs mt-3">
-          Last updated: {settings?.updatedAt?.toDate().toLocaleString() || 'Never'}
+          {t('pricing.lastUpdated', 'Last updated: {value}', { value: settings?.updatedAt?.toDate().toLocaleString() || t('pricing.never', 'Never') })}
         </p>
       </div>
 
@@ -112,7 +114,7 @@ export default function PricingControl() {
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                     <TrendingUp size={18} className="text-orange-600" />
-                    {product.name} Rate
+                    {t('pricing.rate', '{name} Rate', { name: product.name })}
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">Rs</span>
@@ -130,7 +132,7 @@ export default function PricingControl() {
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                     <ImagePlus size={18} className="text-orange-600" />
-                    {product.name} Image
+                    {t('pricing.image', '{name} Image', { name: product.name })}
                   </label>
                   <input
                     type="file"
@@ -149,7 +151,7 @@ export default function PricingControl() {
             className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform disabled:opacity-50"
           >
             <Save size={20} />
-            {loading ? 'Updating...' : 'Update Daily Rates'}
+            {loading ? t('pricing.updating', 'Updating...') : t('pricing.updateRates', 'Update Daily Rates')}
           </button>
         </form>
       </div>
