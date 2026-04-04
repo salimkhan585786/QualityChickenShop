@@ -4,8 +4,10 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { db } from '../firebase';
 import { Truck, CheckCircle } from 'lucide-react';
 import { cn, formatOrderItems, getOrderDetailsPath } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 
 export default function DeliveryManagement() {
+  const { t } = useI18n();
   const [orders, setOrders] = useState([]);
   const [deliveryBoys, setDeliveryBoys] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export default function DeliveryManagement() {
               selectedBoy?.displayName ||
               selectedBoy?.businessName ||
               selectedBoy?.email ||
-              'Assigned'
+              t('common.assigned', 'Assigned')
             )
           : null,
       });
@@ -52,7 +54,7 @@ export default function DeliveryManagement() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Delivery Management</h2>
+      <h2 className="text-2xl font-bold text-gray-900">{t('deliveryManagement.title', 'Delivery Management')}</h2>
 
       <div className="space-y-4">
         {loading ? (
@@ -70,21 +72,21 @@ export default function DeliveryManagement() {
                   'text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full',
                   order.status === 'out-for-delivery' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
                 )}>
-                  {order.status.replace('-', ' ')}
+                  {t(`order.status.${order.status}`, order.status.replace('-', ' '))}
                 </div>
               </div>
             </Link>
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                <Truck size={12} /> Assign Delivery Staff
+                <Truck size={12} /> {t('deliveryManagement.assign', 'Assign Delivery Staff')}
               </label>
               <select
                 className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
                 value={order.deliveryBoyId || ''}
                 onChange={(e) => assignDelivery(order.id, e.target.value)}
               >
-                <option value="">Unassigned</option>
+                <option value="">{t('common.unassigned', 'Unassigned')}</option>
                 {deliveryBoys.map((boy) => (
                   <option key={boy.uid} value={boy.uid}>{boy.businessName}</option>
                 ))}
@@ -93,7 +95,7 @@ export default function DeliveryManagement() {
 
             {order.deliveryBoyId && (
               <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded-lg font-medium">
-                <CheckCircle size={14} /> Assigned to {deliveryBoys.find((boy) => boy.uid === order.deliveryBoyId)?.businessName}
+                <CheckCircle size={14} /> {t('deliveryManagement.assignedTo', 'Assigned to {name}', { name: deliveryBoys.find((boy) => boy.uid === order.deliveryBoyId)?.businessName || t('common.assigned', 'Assigned') })}
               </div>
             )}
           </div>

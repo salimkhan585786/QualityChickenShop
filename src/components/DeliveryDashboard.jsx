@@ -5,8 +5,10 @@ import { db } from '../firebase';
 import { useAuth } from '../App';
 import { MapPin, Phone, Truck, CheckCircle, NotebookPen, History, Filter, Calendar, CalendarRange, IndianRupee } from 'lucide-react';
 import { formatCurrency, formatOrderItems, getOrderDetailsPath } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 
 export default function DeliveryDashboard() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const [activeOrders, setActiveOrders] = useState([]);
   const [completedOrders, setCompletedOrders] = useState([]);
@@ -71,7 +73,7 @@ export default function DeliveryDashboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Delivery Dashboard</h2>
+      <h2 className="text-2xl font-bold text-gray-900">{t('delivery.title', 'Delivery Dashboard')}</h2>
 
       {loading ? (
         <div className="space-y-3">
@@ -80,7 +82,7 @@ export default function DeliveryDashboard() {
       ) : activeOrders.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
           <Truck className="mx-auto text-gray-300 mb-2" size={48} />
-          <p className="text-gray-500 font-medium">No active deliveries</p>
+          <p className="text-gray-500 font-medium">{t('delivery.noActive', 'No active deliveries')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -102,15 +104,15 @@ export default function DeliveryDashboard() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">
                     <MapPin size={16} className="text-orange-500 flex-shrink-0" />
-                    <span>{order.customerAddress || 'Address not available'}</span>
+                    <span>{order.customerAddress || t('common.addressNotAvailable', 'Address not available')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">
                     <NotebookPen size={16} className="text-orange-500 flex-shrink-0" />
-                    <span>{order.notes || 'No special instructions'}</span>
+                    <span>{order.notes || t('common.noSpecialInstructions', 'No special instructions')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-3 rounded-xl font-bold">
                     <Phone size={16} />
-                    <span>{order.customerPhone || 'Phone not available'}</span>
+                    <span>{order.customerPhone || t('common.phoneNotAvailable', 'Phone not available')}</span>
                   </div>
                 </div>
               </Link>
@@ -121,7 +123,7 @@ export default function DeliveryDashboard() {
                     onClick={() => updateStatus(order.id, 'out-for-delivery')}
                     className="flex-1 bg-orange-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
                   >
-                    <Truck size={18} /> Start Delivery
+                    <Truck size={18} /> {t('delivery.startDelivery', 'Start Delivery')}
                   </button>
                 )}
                 {order.status === 'out-for-delivery' && (
@@ -129,7 +131,7 @@ export default function DeliveryDashboard() {
                     onClick={() => updateStatus(order.id, 'delivered')}
                     className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
                   >
-                    <CheckCircle size={18} /> Mark Delivered
+                    <CheckCircle size={18} /> {t('delivery.markDelivered', 'Mark Delivered')}
                   </button>
                 )}
               </div>
@@ -142,7 +144,7 @@ export default function DeliveryDashboard() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <History size={18} className="text-gray-500" />
-            <h3 className="font-bold text-gray-900">Previous Deliveries</h3>
+            <h3 className="font-bold text-gray-900">{t('delivery.previousDeliveries', 'Previous Deliveries')}</h3>
           </div>
           <button
             type="button"
@@ -158,7 +160,7 @@ export default function DeliveryDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                  <Calendar size={12} /> Exact Date
+                  <Calendar size={12} /> {t('common.exactDate', 'Exact Date')}
                 </label>
                 <input
                   type="date"
@@ -169,7 +171,7 @@ export default function DeliveryDashboard() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                  <CalendarRange size={12} /> Date From
+                  <CalendarRange size={12} /> {t('common.dateFrom', 'Date From')}
                 </label>
                 <input
                   type="date"
@@ -180,7 +182,7 @@ export default function DeliveryDashboard() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                  <CalendarRange size={12} /> Date To
+                  <CalendarRange size={12} /> {t('common.dateTo', 'Date To')}
                 </label>
                 <input
                   type="date"
@@ -191,7 +193,7 @@ export default function DeliveryDashboard() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                  <IndianRupee size={12} /> Min Price
+                  <IndianRupee size={12} /> {t('common.minPrice', 'Min Price')}
                 </label>
                 <input
                   type="number"
@@ -203,7 +205,7 @@ export default function DeliveryDashboard() {
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                  <IndianRupee size={12} /> Max Price
+                  <IndianRupee size={12} /> {t('common.maxPrice', 'Max Price')}
                 </label>
                 <input
                   type="number"
@@ -219,7 +221,7 @@ export default function DeliveryDashboard() {
 
         {filteredCompletedOrders.length === 0 ? (
           <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
-            No completed deliveries match these filters
+            {t('delivery.noCompleted', 'No completed deliveries match these filters')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -237,7 +239,7 @@ export default function DeliveryDashboard() {
                 <div className="text-right flex-shrink-0">
                   <p className="font-bold text-green-600">{formatCurrency(order.totalAmount)}</p>
                   <p className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full inline-block bg-green-100 text-green-700">
-                    Delivered
+                    {t('order.status.delivered', 'Delivered')}
                   </p>
                 </div>
               </Link>

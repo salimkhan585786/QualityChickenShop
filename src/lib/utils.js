@@ -71,6 +71,10 @@ export function getProductRates(settings) {
   };
 }
 
+export function getProductImages(settings) {
+  return settings?.productImages || {};
+}
+
 export function getBusinessProductRates(settings, profile) {
   return {
     ...getProductRates(settings),

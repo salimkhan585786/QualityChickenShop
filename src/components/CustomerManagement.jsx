@@ -3,8 +3,10 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { Users, Phone, MapPin, Save,ChevronDown, ChevronUp } from 'lucide-react';
 import { db } from '../firebase';
 import { PRODUCT_DEFINITIONS, formatCurrency, getBusinessProductRates, getProductRates } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 
 export default function CustomerManagement() {
+  const { t } = useI18n();
   const [customers, setCustomers] = useState([]);
   const [settings, setSettings] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -71,7 +73,7 @@ export default function CustomerManagement() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Customers</h2>
+      <h2 className="text-2xl font-bold text-gray-900">{t('customer.title', 'Customers')}</h2>
 
       <div className="space-y-4">
         {customers.map((customer) => {
@@ -117,7 +119,7 @@ export default function CustomerManagement() {
     onClick={(e) => e.stopPropagation()} // 🔥 IMPORTANT (prevents closing when clicking inside)
   >
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold text-gray-900">Business Rates</p>
+                  <p className="text-sm font-bold text-gray-900">{t('customer.businessRates', 'Business Rates')}</p>
                   {editingId === customer.uid ? (
                     <button
                       onClick={() => saveCustomRates(customer)}
@@ -125,14 +127,14 @@ export default function CustomerManagement() {
                       className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 disabled:opacity-50"
                     >
                       <Save size={14} />
-                      {loading ? 'Saving...' : 'Save Rates'}
+                      {loading ? t('customer.savingRates', 'Saving...') : t('customer.saveRates', 'Save Rates')}
                     </button>
                   ) : (
                     <button
                       onClick={() => startEditing(customer)}
                       className="bg-orange-600 text-white px-3 py-2 rounded-xl text-xs font-bold"
                     >
-                      Edit Custom Rates
+                      {t('customer.editRates', 'Edit Custom Rates')}
                     </button>
                   )}
                 </div>
@@ -142,7 +144,7 @@ export default function CustomerManagement() {
                     <div>
                       <p className="text-sm font-medium text-gray-800">{product.name}</p>
                       <p className="text-xs text-gray-500">
-                        Global: {formatCurrency(getProductRates(settings)[product.id] || 0)}/kg
+                        {t('customer.globalRate', 'Global: {rate}/kg', { rate: formatCurrency(getProductRates(settings)[product.id] || 0) })}
                       </p>
                     </div>
                     {editingId === customer.uid ? (
@@ -161,7 +163,7 @@ export default function CustomerManagement() {
 
                 {editingId === customer.uid && (
                   <p className="text-xs text-gray-500">
-                    Leave any product equal to the global rate if you do not want a special business rate for that product.
+                    {t('customer.rateHint', 'Leave any product equal to the global rate if you do not want a special business rate for that product.')}
                   </p>
                 )}
               </div>

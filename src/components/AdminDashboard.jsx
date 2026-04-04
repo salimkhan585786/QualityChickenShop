@@ -4,8 +4,10 @@ import { collection, query, onSnapshot, orderBy, limit, doc, updateDoc, where, s
 import { Package, Users, TrendingUp, Clock, CheckCircle, Truck, XCircle, CreditCard, Calendar, CalendarRange, IndianRupee, Building2, Filter } from 'lucide-react';
 import { db } from '../firebase';
 import { cn, formatCurrency, formatOrderItems, getOrderDetailsPath, getPaymentStatusMeta } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 
 export default function AdminDashboard() {
+  const { t } = useI18n();
   const [orders, setOrders] = useState([]);
   const [settings, setSettings] = useState(null);
   const [customers, setCustomers] = useState([]);
@@ -70,7 +72,7 @@ export default function AdminDashboard() {
           nextAssignee.displayName ||
           nextAssignee.businessName ||
           nextAssignee.email ||
-          'Assigned';
+          t('common.assigned', 'Assigned');
 
         await setDoc(doc(db, 'settings', 'global'), {
           autoAssignCursor: (currentCursor + 1) % deliveryBoys.length,
@@ -110,7 +112,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Admin Panel</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{t('admin.title', 'Admin Panel')}</h2>
       </div>
 
       <div className="flex justify-end">
@@ -127,13 +129,13 @@ export default function AdminDashboard() {
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-center gap-2">
             <Filter size={18} className="text-orange-600" />
-            <h3 className="font-bold text-gray-900">Filters</h3>
+            <h3 className="font-bold text-gray-900">{t('common.filters', 'Filters')}</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <Calendar size={12} /> Exact Date
+                <Calendar size={12} /> {t('common.exactDate', 'Exact Date')}
               </label>
               <input
                 type="date"
@@ -144,7 +146,7 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <CalendarRange size={12} /> Date From
+                <CalendarRange size={12} /> {t('common.dateFrom', 'Date From')}
               </label>
               <input
                 type="date"
@@ -155,7 +157,7 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <CalendarRange size={12} /> Date To
+                <CalendarRange size={12} /> {t('common.dateTo', 'Date To')}
               </label>
               <input
                 type="date"
@@ -166,14 +168,14 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <Building2 size={12} /> Business
+                <Building2 size={12} /> {t('register.business', 'Business')}
               </label>
               <select
                 value={selectedCustomer}
                 onChange={(e) => setSelectedCustomer(e.target.value)}
                 className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500"
               >
-                <option value="">All Businesses</option>
+                <option value="">{t('common.allBusinesses', 'All Businesses')}</option>
                 {customers.map((customer) => (
                   <option key={customer.uid || customer.email || customer.businessName} value={customer.uid}>
                     {customer.businessName}
@@ -183,7 +185,7 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <IndianRupee size={12} /> Min Price
+                <IndianRupee size={12} /> {t('common.minPrice', 'Min Price')}
               </label>
               <input
                 type="number"
@@ -196,7 +198,7 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <IndianRupee size={12} /> Max Price
+                <IndianRupee size={12} /> {t('common.maxPrice', 'Max Price')}
               </label>
               <input
                 type="number"
@@ -216,28 +218,28 @@ export default function AdminDashboard() {
           <div className="bg-orange-50 w-8 h-8 rounded-lg flex items-center justify-center text-orange-600 mb-2">
             <Package size={16} />
           </div>
-          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Orders Today</p>
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{t('admin.ordersToday', 'Orders Today')}</p>
           <p className="text-xl font-bold text-gray-900">{stats.totalOrders}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
           <div className="bg-green-50 w-8 h-8 rounded-lg flex items-center justify-center text-green-600 mb-2">
             <TrendingUp size={16} />
           </div>
-          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Paid Revenue</p>
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{t('admin.paidRevenue', 'Paid Revenue')}</p>
           <p className="text-xl font-bold text-gray-900">{formatCurrency(stats.collectedRevenue)}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
           <div className="bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 mb-2">
             <Clock size={16} />
           </div>
-          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Pending</p>
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{t('admin.pending', 'Pending')}</p>
           <p className="text-xl font-bold text-gray-900">{stats.pendingOrders}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
           <div className="bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center text-red-600 mb-2">
             <CreditCard size={16} />
           </div>
-          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Outstanding</p>
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{t('admin.outstanding', 'Outstanding')}</p>
           <p className="text-xl font-bold text-gray-900">{formatCurrency(stats.outstandingAmount)}</p>
         </div>
       </div>
@@ -248,17 +250,17 @@ export default function AdminDashboard() {
             <Users size={16} />
           </div>
           <div>
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Customers</p>
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{t('admin.customers', 'Customers')}</p>
             <p className="text-xl font-bold text-gray-900">{stats.activeCustomers}</p>
           </div>
         </div>
       </div>
 
       <div className="space-y-3">
-        <h3 className="font-bold text-gray-900">Payment Requests</h3>
+        <h3 className="font-bold text-gray-900">{t('admin.paymentRequests', 'Payment Requests')}</h3>
         {filteredPaymentRequests.length === 0 ? (
           <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
-            No payment confirmations from business yet
+            {t('admin.noPaymentRequests', 'No payment confirmations from business yet')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -267,13 +269,13 @@ export default function AdminDashboard() {
                 <Link to={getOrderDetailsPath('admin', order.id)} className="min-w-0 flex-1">
                   <p className="font-bold text-gray-900">{order.customerName}</p>
                   <p className="text-xs text-gray-600 break-words">{formatOrderItems(order.items)}</p>
-                  <p className="text-xs text-blue-700 font-medium">Business marked this order as paid</p>
+                  <p className="text-xs text-blue-700 font-medium">{t('admin.businessMarkedPaid', 'Business marked this order as paid')}</p>
                 </Link>
                 <button
                   onClick={() => updatePaymentStatus(order.id, 'paid')}
                   className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 flex-shrink-0"
                 >
-                  <CreditCard size={14} /> Confirm Paid
+                  <CreditCard size={14} /> {t('admin.confirmPaid', 'Confirm Paid')}
                 </button>
               </div>
             ))}
@@ -282,7 +284,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="space-y-4">
-        <h3 className="font-bold text-gray-900">Incoming Orders</h3>
+        <h3 className="font-bold text-gray-900">{t('admin.incomingOrders', 'Incoming Orders')}</h3>
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-gray-200 animate-pulse rounded-2xl"></div>)}
@@ -323,7 +325,7 @@ export default function AdminDashboard() {
                         onClick={() => updateOrderStatus(order.id, 'confirmed', order)}
                         className="flex-shrink-0 bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
-                        <CheckCircle size={14} /> Confirm
+                        <CheckCircle size={14} /> {t('admin.confirm', 'Confirm')}
                       </button>
                     )}
                     {order.status === 'confirmed' && (
@@ -331,7 +333,7 @@ export default function AdminDashboard() {
                         onClick={() => updateOrderStatus(order.id, 'packed', order)}
                         className="flex-shrink-0 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
-                        <Package size={14} /> Packed
+                        <Package size={14} /> {t('admin.packed', 'Packed')}
                       </button>
                     )}
                     {order.status === 'packed' && (
@@ -339,7 +341,7 @@ export default function AdminDashboard() {
                         onClick={() => updateOrderStatus(order.id, 'out-for-delivery', order)}
                         className="flex-shrink-0 bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
-                        <Truck size={14} /> Out for Delivery
+                        <Truck size={14} /> {t('admin.outForDelivery', 'Out for Delivery')}
                       </button>
                     )}
                     {order.status !== 'delivered' && order.status !== 'rejected' && (
@@ -347,7 +349,7 @@ export default function AdminDashboard() {
                         onClick={() => updateOrderStatus(order.id, 'rejected', order)}
                         className="flex-shrink-0 bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
-                        <XCircle size={14} /> Reject
+                        <XCircle size={14} /> {t('admin.reject', 'Reject')}
                       </button>
                     )}
                     {order.status === 'delivered' && order.paymentStatus !== 'paid' && (
@@ -355,7 +357,7 @@ export default function AdminDashboard() {
                         onClick={() => updatePaymentStatus(order.id, 'paid')}
                         className="flex-shrink-0 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
                       >
-                        <CreditCard size={14} /> Mark Paid
+                        <CreditCard size={14} /> {t('admin.markPaid', 'Mark Paid')}
                       </button>
                     )}
                   </div>

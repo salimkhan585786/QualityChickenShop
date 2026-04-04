@@ -121,8 +121,9 @@ const Layout = ({ children, role }) => {
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, profile, loading } = useAuth();
+  const { t } = useI18n();
 
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (loading) return <div className="flex items-center justify-center h-screen">{t('common.loading', 'Loading...')}</div>;
   if (!user) return <Navigate to="/login" />;
   if (profile && !allowedRoles.includes(profile.role)) return <Navigate to={`/${profile.role}`} />;
 
@@ -133,6 +134,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useI18n();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -176,7 +178,7 @@ export default function App() {
           <Route path="/delivery/*" element={<ProtectedRoute allowedRoles={['delivery']}><DeliveryRoutes /></ProtectedRoute>} />
           
           <Route path="/" element={
-            loading ? <div>Loading...</div> :
+            loading ? <div>{t('common.loading', 'Loading...')}</div> :
             !user ? <Navigate to="/login" /> :
             !profile ? <Navigate to="/login" /> :
             <Navigate to={`/${profile.role}`} />
